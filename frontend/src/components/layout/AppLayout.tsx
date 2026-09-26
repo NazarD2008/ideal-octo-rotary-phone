@@ -45,8 +45,10 @@ export default function AppLayout() {
         <Header onMobileMenuOpen={() => setMobileOpen(true)} />
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="p-4 md:p-6 lg:p-8">
-            <Outlet />
+          <div className="p-4 md:p-6 lg:p-8 flex justify-center">
+            <div className="w-full max-w-6xl">
+              <Outlet />
+            </div>
           </div>
         </main>
 
