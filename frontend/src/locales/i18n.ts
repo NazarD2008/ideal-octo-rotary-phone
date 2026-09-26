@@ -3,6 +3,7 @@
  * Лиума设备管理系统 - UI 中文化
  */
 
+import ru from './ru';
 import zhCN from './zh-CN';
 
 // 语言包类型定义
@@ -28,7 +29,26 @@ function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string
 }
 
 // 扁平化的翻译字典
-const flatTranslations = flattenObject(zhCN);
+// Choose default locale (prefer Russian when available)
+function getDefaultLocale() {
+  try {
+    const saved = localStorage.getItem('liuma.locale');
+    if (saved === 'ru') return ru;
+    const nav = (navigator.language || (navigator as any).userLanguage || '').toLowerCase();
+    if (nav.startsWith('ru')) return ru;
+  } catch {}
+  return ru;
+}
+let currentTranslations = getDefaultLocale();
+let flatTranslations = flattenObject(currentTranslations);
+
+export function setLocale(locale: string) {
+  if (locale === 'ru') currentTranslations = ru;
+  else if (locale === 'zh-CN') currentTranslations = zhCN;
+  else currentTranslations = ru;
+  flatTranslations = flattenObject(currentTranslations);
+  try { localStorage.setItem('liuma.locale', locale); } catch {}
+}
 
 /**
  * 翻译函数
@@ -54,14 +74,16 @@ export function t(key: string, params?: Record<string, string | number>): string
  * @param locale 语言代码，目前仅支持 'zh-CN'
  * @returns 语言包对象
  */
-export function getLocale(locale: string = 'zh-CN'): Record<string, unknown> {
+export function getLocale(locale: string = 'ru'): Record<string, unknown> {
   switch (locale) {
+    case 'ru':
+      return ru;
     case 'zh-CN':
     case 'zh':
     case 'cn':
       return zhCN;
     default:
-      return zhCN;
+      return ru;
   }
 }
 
@@ -71,7 +93,11 @@ export function getLocale(locale: string = 'zh-CN'): Record<string, unknown> {
  * @returns 是否支持
  */
 export function isSupported(locale: string): boolean {
-  return ['zh-CN', 'zh', 'cn'].includes(locale);
+  return ['ru','zh-CN', 'zh', 'cn'].includes(locale);
+}
+
+export function getSupportedLocales(): string[] {
+  return ['ru','zh-CN'];
 }
 
 /**
