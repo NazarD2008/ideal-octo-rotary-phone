@@ -48,32 +48,11 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Hero Section */}
       <section className="mb-4">
-        <div className="max-w-4xl">
+        <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-transparent">
             {getGreeting()}
           </h1>
           <p className="text-muted-foreground text-lg">{t('pages.dashboard.welcome')}</p>
-        </div>
-      </section>
-
-      {/* Action toolbar */}
-      <section className="mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button variant="default" size="sm" onClick={() => navigate('/devices')} className="gap-2">
-            <Smartphone className="h-4 w-4" /> Устройства
-          </Button>
-          <Button variant="default" size="sm" onClick={() => navigate('/builder')} className="gap-2">
-            <Zap className="h-4 w-4" /> Сборка APK
-          </Button>
-          <Button variant="default" size="sm" onClick={() => navigate('/logs')} className="gap-2">
-            <ArrowRight className="h-4 w-4" /> Просмотреть журнал
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="gap-2">
-            <UserCog className="h-4 w-4" /> Настройки
-          </Button>
-          <Button variant="ghost" size="sm" onClick={fetchDashboard} className="gap-2">
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Обновить
-          </Button>
         </div>
       </section>
 
