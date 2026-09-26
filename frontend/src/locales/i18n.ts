@@ -14,23 +14,13 @@ function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, st
 
 const flatTranslations = flattenObject(ru as Record<string, any>);
 
-function escapeRegExp(s: string): string {
-  // Avoid regex literals by escaping characters via a Set lookup
-  const specials = new Set(['.', '*', '+', '?', '^', '$', '{', '}', '(', ')', '|', '[', ']', '\', '/']);
-  let out = '';
-  for (const ch of s) {
-    out += specials.has(ch) ? '\' + ch : ch;
-  }
-  return out;
-}
-
 export function t(key: string, params?: Record<string, string | number>): string {
   let translation = flatTranslations[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      const safeKey = escapeRegExp(String(k));
-      const re = new RegExp('\{' + safeKey + '\}', 'g');
-      translation = translation.replace(re, String(v));
+      const token = `{${k}}`;
+      // Use split/join to avoid any regex literal parsing/escaping issues
+      translation = translation.split(token).join(String(v));
     }
   }
   return translation;
