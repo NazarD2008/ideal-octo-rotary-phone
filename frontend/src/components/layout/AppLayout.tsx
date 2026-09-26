@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './sidebar';
 import Header from './header'; // refactored header (index.tsx in header/)
-import MobileNav from './mobile-nav';
+import MobileDrawer from './header/MobileDrawer';
+import { getNavItems } from '@/config/navigation';
+import { useAuthStore } from '@/store/auth';
+import { useNavigate } from 'react-router-dom';
 import { useDevicesStore } from '@/store/devices';
 import { initAdminSocket, disconnectAdminSocket } from '@/services/socket';
 import type { Socket } from 'socket.io-client';
@@ -12,6 +15,9 @@ export default function AppLayout() {
   const location = useLocation();
   const { onDeviceConnected, onDeviceDisconnected } = useDevicesStore();
   const socketRef = useRef<Socket | null>(null);
+  const navigate = useNavigate();
+  const { user, logout, hasPermission } = useAuthStore();
+  const navItems = getNavItems(hasPermission);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -52,7 +58,14 @@ export default function AppLayout() {
 
       </div>
 
-      <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <MobileDrawer
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        items={navItems}
+        user={user}
+        onLogout={async () => { await logout(); setMobileOpen(false); navigate('/login'); }}
+        ariaLabel={"Навигация"}
+      />
     </div>
   );
 }
