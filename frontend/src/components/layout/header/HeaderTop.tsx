@@ -24,7 +24,7 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () =
           <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold shadow">
             <Zap className="h-5 w-5" />
           </div>
-          <div className="hidden sm:flex flex-col">
+          <div className="hidden sm:flex flex-col" style={{minWidth: 180}}>
             <span className="text-base font-semibold text-foreground">{t('app.title') || 'Консоль Лиума'}</span>
             <span className="text-xs text-muted-foreground">{t('app.subtitle') || 'Панель управления'}</span>
           </div>
