@@ -1,24 +1,28 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { Zap } from 'lucide-react';
+import { t } from '@/locales/i18n';
 
-export interface BrandProps {
+interface BrandProps {
   logo?: React.ReactNode;
-  title: string;
+  title?: string;
   subtitle?: string;
   href?: string;
-  onClick?: () => void;
   compact?: boolean;
 }
 
-export default function Brand({ logo, title, subtitle, href, onClick, compact }: BrandProps) {
-  const Wrapper: any = href ? 'a' : 'div';
+export default function Brand({ logo, title, subtitle, href = '/', compact = false }: BrandProps) {
   return (
-    <Wrapper href={href} onClick={onClick} className={`flex items-center gap-3 ${compact ? 'text-sm' : ''}`}>
-      {logo && <div className="h-10 w-10 flex items-center justify-center">{logo}</div>}
-      <div className="hidden sm:flex flex-col leading-tight">
-        <span className="font-semibold">{title}</span>
-        {subtitle && <span className="text-xs text-muted-foreground">{subtitle}</span>}
+    <Link to={href} className="flex items-center gap-3 cursor-pointer">
+      <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold shadow">
+        {logo || <Zap className="h-5 w-5" />}
       </div>
-      <span className="sm:hidden font-semibold">{title}</span>
-    </Wrapper>
+      {!compact && (
+        <div className="hidden sm:flex flex-col" style={{ minWidth: 180 }}>
+          <span className="text-base font-semibold text-foreground">{title || t('app.title') || 'Консоль Лиума'}</span>
+          <span className="text-xs text-muted-foreground">{subtitle || t('app.subtitle') || 'Панель управления'}</span>
+        </div>
+      )}
+    </Link>
   );
 }

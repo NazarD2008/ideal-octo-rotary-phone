@@ -1,54 +1,60 @@
-import React, { useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { t } from '@/locales/i18n';
 
-interface NavItem { to: string; label: string; }
+type NavItem = { to: string; label: string; icon?: React.ComponentType<any>; end?: boolean };
 
-export default function MobileDrawer({ open, onClose, items, user, onLogout, ariaLabel = 'Mobile menu' } : { open: boolean; onClose: ()=>void; items: NavItem[]; user?: any; onLogout?: ()=>Promise<void>; ariaLabel?: string }){
-  const ref = useRef<HTMLDivElement | null>(null);
-  const portalRoot = document.body;
+interface MobileDrawerProps {
+  open: boolean;
+  onClose: () => void;
+  items?: NavItem[];
+}
 
-  useEffect(()=>{
-    if(!open) return;
-    const prev = document.activeElement as HTMLElement | null;
-    const handleKey = (e: KeyboardEvent)=>{
-      if(e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return ()=>{
-      document.removeEventListener('keydown', handleKey);
+export default function MobileDrawer({ open, onClose, items = [] }: MobileDrawerProps) {
+  useEffect(() => {
+    if (open) {
+      // simple body scroll lock for the drawer; App-level code should prefer a ref-counted lock
+      document.body.style.overflow = 'hidden';
+    } else {
       document.body.style.overflow = '';
-      prev?.focus();
-    };
-  },[open,onClose]);
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
 
-  if(!open) return null;
+  if (!open) return null;
 
-  return ReactDOM.createPortal(
-    <div className="fixed inset-0 z-50 flex">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} aria-hidden />
-      <aside ref={ref} role="dialog" aria-modal="true" aria-label={ariaLabel} className="w-72 max-w-[85vw] bg-card border-border p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <aside className="absolute left-0 top-0 h-full w-72 bg-surface p-4 shadow-lg">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Меню</h3>
-          <button aria-label="Close" onClick={onClose} className="p-2">✕</button>
+          <div className="text-lg font-semibold">{t('header.brand.title') || 'Консоль Лиума'}</div>
+          <button aria-label={t('header.closeMenu') || 'Close menu'} onClick={onClose} className="p-2 rounded hover:bg-surface/50">
+            <X className="h-5 w-5" />
+          </button>
         </div>
+
         <nav className="flex flex-col gap-2">
-          {items.map((it)=> (
-            <NavLink key={it.to} to={it.to} onClick={onClose} className="px-2 py-2 rounded hover:bg-surface">{it.label}</NavLink>
-          ))}
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded ${isActive ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
+                onClick={onClose}
+              >
+                {Icon ? <Icon className="h-4 w-4" /> : null}
+                <span>{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
-        <div className="mt-4 border-t pt-4">
-          {user ? (
-            <div>
-              <p className="font-medium">{user.username}</p>
-              <button onClick={()=>{ onLogout?.(); onClose(); }} className="text-sm text-destructive mt-2">Выйти</button>
-            </div>
-          ) : (
-            <NavLink to="/login" onClick={onClose}>Войти</NavLink>
-          )}
-        </div>
       </aside>
-    </div>, portalRoot
+    </div>,
+    document.body,
   );
 }
