@@ -15,7 +15,7 @@ function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, st
 const flatTranslations = flattenObject(ru as Record<string, any>);
 
 function escapeRegExp(s: string): string {
-  // escape characters that have special meaning in RegExp
+  // Escape characters with special meaning in regex
   return s.replace(/[.*+?^${}()|[\]\]/g, '\$&');
 }
 
