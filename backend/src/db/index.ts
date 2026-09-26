@@ -291,7 +291,24 @@ export function initDb(): DB {
     log.warn(`build_records migration warning: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  dbInstance = drizzle(sqliteDb, { schema });
+  
+  // Migrate: add machine_hash column to sessions if missing
+  try {
+    const tableInfoSessions = sqliteDb.pragma('table_info(sessions)') as Array<{ name: string }>;
+    const sessionCols = tableInfoSessions.map(c => c.name);
+    if (!sessionCols.includes('machine_hash')) {
+      log.info('Adding machine_hash column to sessions');
+      try {
+        sqliteDb.exec(`ALTER TABLE sessions ADD COLUMN machine_hash TEXT`);
+      } catch (e) {
+        log.warn(`Failed to add sessions.machine_hash column: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  } catch (err) {
+    log.warn(`sessions migration warning: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+dbInstance = drizzle(sqliteDb, { schema });
   log.info('Database initialized successfully (Drizzle ORM)');
   return dbInstance;
 }
