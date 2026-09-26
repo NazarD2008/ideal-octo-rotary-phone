@@ -1,17 +1,14 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import Brand from './Brand';
 import HeaderNav from './HeaderNav';
 import HeaderActions from './HeaderActions';
-import MobileDrawer from './MobileDrawer';
 import { getNavItems } from '@/config/navigation';
 import { useAuthStore } from '@/store/auth';
 import { t } from '@/locales/i18n';
 
-export default function HeaderTop() {
+export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen?: () => void }) {
   const navigate = useNavigate();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const { hasPermission } = useAuthStore();
 
   const items = getNavItems(hasPermission);
@@ -20,7 +17,7 @@ export default function HeaderTop() {
     <header className="header-inner w-full mx-auto flex items-center justify-between h-16 px-4 max-w-6xl" role="banner">
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 cursor-pointer lg:hidden">
-          <button aria-label={t('header.openMenu') || 'Open menu'} onClick={() => setMobileOpen(true)} className="p-2 rounded hover:bg-surface/40">
+          <button aria-label={t('header.openMenu') || 'Open menu'} onClick={() => onMobileMenuOpen?.()} className="p-2 rounded hover:bg-surface/40">
             <Menu className="h-5 w-5" />
           </button>
         </div>
@@ -44,8 +41,6 @@ export default function HeaderTop() {
           <HeaderActions />
         </div>
       </div>
-
-      <MobileDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} items={items} />
     </header>
   );
 }
