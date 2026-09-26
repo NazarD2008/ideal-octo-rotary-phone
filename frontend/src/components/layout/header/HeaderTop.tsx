@@ -1,17 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Zap, Plus } from 'lucide-react';
+import { Zap, Plus, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from './ThemeToggle';
 import ProfileMenu from './ProfileMenu';
 import HeaderNav from './HeaderNav';
+import Brand from './Brand';
+import HeaderActions from './HeaderActions';
 import { t } from '@/locales/i18n';
 
-export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () => void }) {
+export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen?: () => void }) {
   const navigate = useNavigate();
 
   return (
-    <div className="header-inner w-full mx-auto flex items-center justify-between h-16 px-4" role="banner">
+    <header className="header-inner w-full mx-auto flex items-center justify-between h-16 px-4 max-w-6xl" role="banner">
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/') }>
           <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold shadow">
@@ -25,10 +27,8 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () =
       </div>
 
       <div className="header-center flex-1 flex items-center justify-center">
-        {/* Center: nav items */}
         <div className="w-full max-w-3xl">
-          <nav className="flex items-center justify-center gap-2">
-            {/* Nav items are rendered by HeaderNav; include directly to ensure center alignment */}
+          <nav className="flex items-center justify-center gap-2" aria-label={t('header.nav.ariaLabel') || 'Primary'}>
             <HeaderNav />
           </nav>
         </div>
