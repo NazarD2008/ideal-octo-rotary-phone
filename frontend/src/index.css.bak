@@ -1,0 +1,22 @@
+ /* Builder: highlight animation for newly-created rows */
+  @keyframes builderJobHighlight {
+    0% {
+      background-color: rgba(25, 118, 210, 0.12);
+      transform: translateY(-2px);
+      box-shadow: 0 0 0 rgba(25,118,210,0);
+    }
+    30% {
+      background-color: rgba(25, 118, 210, 0.06);
+      transform: translateY(0);
+      box-shadow: 0 10px 30px rgba(25,118,210,0.12);
+    }
+    100% {
+      background-color: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+  }
+  .job-row--highlight {
+    animation: builderJobHighlight 6s cubic-bezier(.2,.8,.2,1) forwards;
+    border-radius: 6px;
+  }

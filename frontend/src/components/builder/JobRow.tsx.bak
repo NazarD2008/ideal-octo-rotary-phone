@@ -1,0 +1,139 @@
+import React from 'react';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Chip from '@mui/material/Chip';
+import { Download, RefreshCw, Info, X, FileText, Eye } from 'lucide-react';
+import { formatDate, formatBytes } from './utils';
+import { statusVariant } from './utils';
+
+export default function JobRow({
+  job,
+  selectedJobId,
+  justCreated, // boolean: newly created job highlight
+  onSelect,
+  onDownload,
+  onViewLog,
+  onDownloadLog,
+  onCancel,
+  onRetry,
+  actingJobId,
+  downloadingId,
+}: any) {
+  return (
+    <TableRow
+      key={job.id}
+      data-job-row={job.id}
+      className={`cursor-pointer ${selectedJobId === job.id ? 'bg-primary/5' : ''} ${justCreated ? 'job-row--highlight' : ''}`}
+      onClick={() => onSelect && onSelect(job.id)}
+    >
+      <TableCell className="font-mono text-xs">{job.id}</TableCell>
+      <TableCell>{job.appName || '-'}</TableCell>
+      <TableCell className="font-mono text-xs truncate max-w-sm">{job.serverUrl || '-'}</TableCell>
+      <TableCell>
+        <Chip
+          label={job.status || '-'}
+          color={
+            statusVariant(job.status) === 'destructive'
+              ? 'error'
+              : statusVariant(job.status) === 'secondary'
+              ? 'secondary'
+              : statusVariant(job.status) === 'warning'
+              ? 'warning'
+              : statusVariant(job.status) === 'success'
+              ? 'success'
+              : 'default'
+          }
+          size="small"
+        />
+      </TableCell>
+      <TableCell>{formatBytes(job.fileSize)}</TableCell>
+      <TableCell className="font-mono text-xs">{formatDate(job.createdAt)}</TableCell>
+      <TableCell align="right">
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Tooltip title="Скачать APK">
+            <span>
+              <IconButton
+                size="small"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onDownload && onDownload(job.id, job.appName, e);
+                }}
+                disabled={downloadingId !== null || job.status !== 'completed'}
+              >
+                <Download />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Информация">
+            <IconButton
+              size="small"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                alert(JSON.stringify(job, null, 2));
+              }}
+            >
+              <Info />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Показать лог">
+            <IconButton
+              size="small"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onViewLog && onViewLog(job.id, e);
+              }}
+            >
+              <Eye />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Скачать лог">
+            <IconButton
+              size="small"
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onDownloadLog && onDownloadLog(job.id);
+              }}
+            >
+              <FileText />
+            </IconButton>
+          </Tooltip>
+
+          <Tooltip title="Отменить">
+            <span>
+              <IconButton
+                size="small"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onCancel && onCancel(job.id, e);
+                }}
+                disabled={actingJobId === job.id || !['pending', 'started'].includes(String(job.status))}
+              >
+                <X />
+              </IconButton>
+            </span>
+          </Tooltip>
+
+          <Tooltip title="Повторить">
+            <span>
+              <IconButton
+                size="small"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  onRetry && onRetry(job.id, e);
+                }}
+                disabled={actingJobId === job.id || !['failed', 'cancelled'].includes(String(job.status))}
+              >
+                <RefreshCw />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}

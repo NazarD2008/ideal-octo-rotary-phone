@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Enhanced tech‑neon theme inspired by GitHub/Primer + your original file.
+  Adds more visual depth: layered grids, animated neon glows, frosted glass cards,
+  gradient accents, enhanced buttons and aliases for common tokens.
+*/
+
+:root{
+  /* primary palette (kept warm/gold accents + cool blues) */
+  --color-background: #071022;        /* deep blue/ink */
+  --color-surface: #0f1724;           /* cards */
+  --color-foreground: #e6edf3;        /* main text */
+  --color-muted-foreground: #98a6b3;  /* muted */
+  --color-border: rgba(255,255,255,0.04);
+  --color-primary: #f6c94d;           /* gold accent */
+  --color-primary-2: #ff9b4a;         /* secondary warm */
+  --color-blue: #2bd0ff;             /* neon blue */
+  --color-success: #2ea44f;
+  --color-danger: #f85149;
+  --glass: rgba(255,255,255,0.02);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --ui-font: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+/* Backdrop + body */
+html,body,#root{height:100%}
+body{
+  margin:0;
+  background: linear-gradient(180deg,#04101a 0%, var(--color-background) 60%);
+  color:var(--color-foreground);
+  font-family:var(--ui-font);
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overscroll-behavior: none;
+}
+
+/* Layer 1: animated subtle tech grid */
+body::before{
+  content:"";
+  position:fixed;inset:0;pointer-events:none;z-index:-2;
+  background-image:
+    linear-gradient(rgba(246,201,77,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(246,201,77,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform-origin: center;
+  filter: blur(0.5px);
+  animation: gridShift 24s linear infinite;
+}
+@keyframes gridShift{0%{transform:translate(0,0)}100%{transform:translate(48px,48px)}}
+
+/* Layer 2: scanline + soft vignette */
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background: linear-gradient(180deg, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0.07) 50%, rgba(0,0,0,0.18) 100%);
+  mix-blend-mode: overlay;opacity:0.45;
+}
+
+/* Subtle stripe overlay for CRT/tech feeling */
+.stripe-overlay{position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:0.06;background-image:repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0 1px, transparent 1px 3px);}
+
+/* thin scrollbar */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:linear-gradient(180deg, rgba(255,215,0,0.18), rgba(255,215,0,0.06));border-radius:6px}
+
+/* Common helpers and aliases for old tokens */
+.bg-background{background:var(--color-background)!important}
+.text-muted-foreground{color:var(--color-muted-foreground)!important}
+.bg-card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));}
+
+/* Frosted glass card with neon left accent */
+.card{
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:var(--radius-md);padding:14px;border:1px solid var(--color-border);
+  box-shadow: 0 12px 36px rgba(2,6,23,0.6);
+  position:relative;overflow:hidden;backdrop-filter: blur(6px);
+}
+.card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:linear-gradient(180deg,var(--color-primary),var(--color-primary-2));opacity:0.95}
+
+/* header accent stripe */
+.header-accent{height:6px;width:100%;background:linear-gradient(90deg,var(--color-blue),var(--color-primary));border-radius:0 0 var(--radius-sm) var(--radius-sm);margin-bottom:12px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;border:1px solid transparent;transition:transform .12s ease,box-shadow .12s ease}
+.btn:active{transform:translateY(0)}
+.btn--primary{background:linear-gradient(90deg,var(--color-primary),var(--color-primary-2));color:#07101a;border-color:rgba(255,255,255,0.06);box-shadow:0 8px 26px rgba(246,201,77,0.12)}
+.btn--primary:hover{transform:translateY(-2px)}
+.btn--ghost{background:transparent;color:var(--color-muted-foreground);border:1px dashed rgba(255,255,255,0.02)}
+.icon-btn{width:38px;height:38px;display:inline-grid;place-items:center;border-radius:8px;background:rgba(255,255,255,0.01);border:1px solid rgba(255,255,255,0.03)}
+
+/* Chip/Badge */
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);color:var(--color-muted-foreground);font-weight:800}
+.chip.success{background:rgba(46,164,79,0.08);color:var(--color-success)}
+.chip.error{background:rgba(248,81,73,0.08);color:var(--color-danger)}
+
+/* table */
+.table{width:100%;border-collapse:collapse;font-size:0.95rem}
+.table thead th{color:var(--color-muted-foreground);font-weight:700;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:left}
+.table tbody td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.02)}
+.table tbody tr:hover{background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent)}
+
+/* log viewer */
+.log{background:linear-gradient(180deg,#05111b 0%, #071022 100%);padding:12px;border-radius:8px;color:var(--color-foreground);font-family:var(--ui-font);font-family:var(--ui-font), ui-monospace, Menlo, monospace;max-height:480px;overflow:auto;border:1px solid rgba(255,255,255,0.03)}
+.log-line{padding:2px 0;white-space:pre-wrap}
+.log-line.err{color:var(--color-danger)}
+
+/* Tech glow helpers */
+.glow-gold{box-shadow:0 0 14px rgba(255,215,0,0.28),0 0 28px rgba(255,215,0,0.12),inset 0 0 18px rgba(255,215,0,0.06)}
+.glow-blue{box-shadow:0 0 14px rgba(43,208,255,0.24),0 0 28px rgba(43,208,255,0.12)}
+.glow-accent{box-shadow:0 0 18px rgba(111,108,255,0.18),0 0 36px rgba(111,108,255,0.08)}
+
+/* Tech border corners */
+.tech-border{position:relative;border:1px solid rgba(255,215,0,0.12);border-radius:8px}
+.tech-border::before{content:"";position:absolute;left:-1px;top:-1px;width:18px;height:18px;border-top:2px solid rgba(255,215,0,0.9);border-left:2px solid rgba(255,215,0,0.9);border-top-left-radius:4px}
+.tech-border::after{content:"";position:absolute;right:-1px;bottom:-1px;width:18px;height:18px;border-bottom:2px solid rgba(255,215,0,0.9);border-right:2px solid rgba(255,215,0,0.9);border-bottom-right-radius:4px}
+
+/* animated pulse */
+@keyframes pulse-neon{0%,100%{filter:drop-shadow(0 0 6px rgba(246,201,77,0.12))}50%{filter:drop-shadow(0 0 20px rgba(246,201,77,0.28))}}
+.pulse-gold{animation:pulse-neon 2.2s ease-in-out infinite}
+
+/* gradient gold text shimmer */
+.gradient-gold{background:linear-gradient(90deg,#FFD700, #FFB347, #FFD700);-webkit-background-clip:text;background-clip:text;color:transparent;animation:gold-shift 3.4s ease-in-out infinite}
+@keyframes gold-shift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+/* accent stripe for panels */
+.panel-accent{position:relative}
+.panel-accent::after{content:"";position:absolute;right:0;top:0;height:100%;width:6px;background:linear-gradient(180deg,var(--color-blue),var(--color-primary));border-radius:0 6px 6px 0}
+
+/* job row highlight (consistent with new theme) */
+.job-row--highlight{background:linear-gradient(90deg, rgba(43,208,255,0.06), rgba(246,201,77,0.03));border-left:4px solid var(--color-blue)}
+.job-row--selected{background:linear-gradient(90deg, rgba(43,208,255,0.05), transparent)}
+
+/* small utilities */
+.muted{color:var(--color-muted-foreground)}
+.font-mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace}
+.center{display:flex;align-items:center;justify-content:center}
+.p-4{padding:1rem}
+
+/* ensure MUI Paper/Panes get consistent background */
+.MuiPaper-root{background:var(--color-surface) !important}
+.MuiDialog-paper{background:var(--color-surface) !important}
+.MuiButton-root{border-radius:8px}
+
+/* responsiveness */
+@media (max-width:900px){.app{padding:12px}.header{flex-direction:column;align-items:flex-start}}
+
+/* end */

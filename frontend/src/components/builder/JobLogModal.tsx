@@ -1,0 +1,135 @@
+import React, { useEffect, useRef, useState } from 'react'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import IconButton from '@mui/material/IconButton'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import DownloadIcon from '@mui/icons-material/Download'
+import CloseIcon from '@mui/icons-material/Close'
+
+// Note: if you have a socket helper, integrate it (onBuilderLog / offBuilderLog)
+
+type Props = {
+  jobId: number | null
+  open: boolean
+  onClose: () => void
+}
+
+export default function JobLogModal({ jobId, open, onClose }: Props) {
+  const [lines, setLines] = useState<string[]>([])
+  const [search, setSearch] = useState('')
+  const [autoscroll, setAutoscroll] = useState(true)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const gotSocketEvents = useRef(false)
+  const pollHandle = useRef<number | null>(null)
+  const MAX_LINES = 10000
+
+  const appendLines = (newLines: string[]) => {
+    setLines(prev => {
+      const merged = prev.concat(newLines)
+      if (merged.length <= MAX_LINES) return merged
+      return merged.slice(merged.length - MAX_LINES)
+    })
+  }
+
+  async function fetchTail() {
+    if (!jobId) return
+    try {
+      const r = await fetch(`/api/builder/job/${jobId}/log?lines=500`)
+      if (!r.ok) return
+      const text = await r.text()
+      const arr = text.split(/\r?\n/).filter(Boolean)
+      setLines(arr)
+    } catch (err) {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    if (!open || !jobId) return
+
+    // initial load
+    fetchTail()
+
+    // Subscribe to socket (if available)
+    let unsub: (() => void) | null = null
+    try {
+      // Example:
+      // unsub = onBuilderLog((payload) => {
+      //   if (payload.jobId === jobId) {
+      //     gotSocketEvents.current = true
+      //     appendLines([payload.line])
+      //   }
+      // })
+    } catch (e) {
+      // no socket helper — fallback to polling
+    }
+
+    // Fallback polling
+    gotSocketEvents.current = false
+    pollHandle.current = window.setInterval(async () => {
+      if (gotSocketEvents.current) {
+        if (pollHandle.current) { clearInterval(pollHandle.current); pollHandle.current = null }
+        return
+      }
+      await fetchTail()
+    }, 2500)
+
+    return () => {
+      if (unsub) unsub()
+      if (pollHandle.current) { clearInterval(pollHandle.current); pollHandle.current = null }
+    }
+  }, [open, jobId])
+
+  useEffect(() => {
+    if (!autoscroll) return
+    const el = containerRef.current
+    if (!el) return
+    setTimeout(() => { el.scrollTop = el.scrollHeight }, 50)
+  }, [lines, autoscroll])
+
+  const filtered = lines.filter(l => l.toLowerCase().includes(search.toLowerCase()))
+
+  const handleDownload = () => {
+    if (!jobId) return
+    const url = `/api/builder/job/${jobId}/log?download=1`
+    window.open(url, '_blank')
+  }
+
+  return (
+    <Dialog open={open} fullWidth maxWidth="md" onClose={onClose}>
+      <DialogTitle>
+        Лог сборки {jobId ? `#${jobId}` : ''}
+        <IconButton size="small" onClick={handleDownload} style={{ float: 'right' }} title="Скачать лог">
+          <DownloadIcon fontSize="small" />
+        </IconButton>
+        <IconButton size="small" onClick={onClose} style={{ float: 'right', marginRight: 8 }} title="Закрыть">
+          <CloseIcon fontSize="small" />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent dividers style={{ height: 420, padding: 8 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <TextField size="small" placeholder="Поиск" value={search} onChange={e => setSearch(e.target.value)} fullWidth />
+          <FormControlLabel control={<Checkbox checked={autoscroll} onChange={e => setAutoscroll(e.target.checked)} />} label="Автопрокрутка" />
+        </div>
+
+        <div ref={containerRef} style={{ fontFamily: 'monospace', fontSize: 12, overflow: 'auto', height: '100%', background: '#0f1720', color: '#e6edf3', padding: 12, borderRadius: 6 }}>
+          {filtered.map((ln, idx) => (
+            <div key={idx} style={{ whiteSpace: 'pre-wrap', marginBottom: 2 }}>{ln}</div>
+          ))}
+          {filtered.length === 0 && <div style={{ color: '#9aa4ad' }}>Нет строк, соответствующих фильтру.</div>}
+        </div>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={() => { setLines([]) }} color="inherit">Очистить</Button>
+        <Button onClick={handleDownload} variant="contained">Скачать лог</Button>
+      </DialogActions>
+    </Dialog>
+  )
+}

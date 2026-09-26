@@ -1,0 +1,61 @@
+import React from 'react';
+import TableContainer from '@mui/material/TableContainer';
+import Paper from '@mui/material/Paper';
+import Table from '@mui/material/Table';
+import TableHead from '@mui/material/TableHead';
+import TableBody from '@mui/material/TableBody';
+import TableRow from '@mui/material/TableRow';
+import TableCell from '@mui/material/TableCell';
+import JobRow from './JobRow';
+
+type Props = {
+  jobs?: any[];
+  selectedJobId?: number | null;
+  justCreatedId?: number | null;
+  onSelect?: (id: number) => void;
+  onDownload?: (id: number, name?: string, e?: any) => void;
+  onViewLog?: (id: number, e?: any) => void;
+  onDownloadLog?: (id: number) => void;
+  onCancel?: (id: number) => void;
+  onRetry?: (id: number) => void;
+  actingJobId?: number | null;
+  downloadingId?: number | null;
+};
+
+export default function JobList({ jobs = [], selectedJobId = null, justCreatedId = null, onSelect, onDownload, onViewLog, onDownloadLog, onCancel, onRetry, actingJobId = null, downloadingId = null }: Props) {
+  return (
+    <TableContainer component={Paper} variant="outlined">
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>ID</TableCell>
+            <TableCell>Приложение</TableCell>
+            <TableCell>Сервер</TableCell>
+            <TableCell>Статус</TableCell>
+            <TableCell>Размер</TableCell>
+            <TableCell>Создано</TableCell>
+            <TableCell align="right">Действия</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {jobs.map((job) => (
+            <JobRow
+              key={job.id}
+              job={job}
+              selectedJobId={selectedJobId}
+              justCreated={justCreatedId === job.id}
+              onSelect={onSelect}
+              onDownload={onDownload}
+              onViewLog={onViewLog}
+              onDownloadLog={onDownloadLog}
+              onCancel={onCancel}
+              onRetry={onRetry}
+              actingJobId={actingJobId}
+              downloadingId={downloadingId}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
