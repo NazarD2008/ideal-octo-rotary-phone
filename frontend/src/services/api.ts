@@ -89,10 +89,12 @@ export const builderApi = {
 
 export const usersApi = {
   getAll: () => api.get('/users'),
-  create: (data: { username: string; email: string; password: string; role: string; permissions?: string[] }) => api.post('/users', data),
+  create: (data: { username: string; email: string; password: string; role: string; permissions?: string[]; generateBinding?: boolean }) => api.post('/users', data),
   update: (id: number, data: { username?: string; email?: string; role?: string; permissions?: string[] }) => api.put(`/users/${id}`, data),
   updatePermissions: (id: number, permissions: string[]) => api.put(`/users/${id}/permissions`, { permissions }),
   getPermissionsSchema: () => api.get('/users/permissions-schema'),
   resetPassword: (id: number, password: string) => api.put(`/users/${id}/password`, { password }),
   delete: (id: number) => api.delete(`/users/${id}`),
+  rotateBinding: (id: number) => api.post(`/users/${id}/binding/rotate`),
+  revokeBinding: (id: number) => api.post(`/users/${id}/binding/revoke`),
 };
