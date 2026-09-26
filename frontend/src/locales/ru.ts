@@ -43,4 +43,6 @@
         actions: 'Р”РµР№СЃС‚РІРёСЏ'
       }
     }
-  };
+  
+  , pages: { dashboard: { greeting: { afternoon: "Добрый день, {name}" }, welcome: "Добро пожаловать в панель управления", refreshData: "Обновить данные" }, devices: { title: "Устройства", description: "Список подключенных устройств" } }
+};
