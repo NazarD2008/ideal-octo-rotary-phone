@@ -10,16 +10,8 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () =
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center justify-between h-16">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onMobileMenuOpen}
-          className="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-border bg-surface text-foreground hover:bg-surface-light hover:border-primary transition-all"
-          aria-label={t('nav.openMenu') || 'Открыть меню'}
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-        </button>
-
+    <div className="header-inner max-w-6xl mx-auto flex items-center justify-between h-16 px-4" role="banner">
+      <div className="flex items-center gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/') }>
           <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold shadow">
             <Zap className="h-5 w-5" />
@@ -31,7 +23,17 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () =
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="header-center flex-1 flex items-center justify-center">
+        {/* Center: nav items */}
+        <div className="w-full max-w-3xl">
+          <nav className="flex items-center justify-center gap-2">
+            {/* Nav items are rendered by HeaderNav; include directly to ensure center alignment */}
+            <HeaderNav />
+          </nav>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-shrink-0">
         <div className="hidden md:flex items-center gap-2">
           <Button onClick={() => navigate('/users')} size="sm" className="gap-2 btn-pill">
             <Plus className="h-4 w-4" /> {t('pages.users.addUser')}

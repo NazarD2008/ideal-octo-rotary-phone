@@ -6,13 +6,12 @@ export default function HeaderNav() {
   const { hasPermission } = useAuthStore();
   const items = getNavItems(hasPermission);
 
-  // Ensure the top bar shows the requested items in this order: Панель управления, Устройства, Пользователи, Сборка APK, Настройки, Журнал
   const desiredOrder = ['/', '/devices', '/users', '/builder', '/settings', '/logs'];
   const ordered = desiredOrder.map(path => items.find(i => i.to === path)).filter(Boolean) as typeof items;
 
   return (
     <nav className="h-12 flex items-center">
-      <div className="flex gap-2 overflow-x-auto py-2">
+      <div className="flex gap-2 justify-center w-full">
         {ordered.map((item) => (
           <NavLink
             key={item.to}
