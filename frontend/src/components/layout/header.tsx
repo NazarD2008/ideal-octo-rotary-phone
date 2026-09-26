@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useThemeStore } from '@/store/theme';
 import { useAuthStore } from '@/store/auth';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Monitor, Check, LogOut, ShieldCheck, Shield } from 'lucide-react';
+import { Sun, Moon, Monitor, Check, LogOut, ShieldCheck, Shield, Plus, Zap, RefreshCw } from 'lucide-react';
 import type { UserRole } from '@/types';
 
 const themeOptions = [
@@ -40,17 +40,34 @@ export default function Header({ onMobileMenuOpen }: { onMobileMenuOpen: () => v
   const initial = user?.username?.[0]?.toUpperCase() || 'U';
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between h-[57px] px-4 md:px-6 lg:px-8 border-b border-border bg-background/80 backdrop-blur-sm">
+    <header className="sticky top-0 z-30 grid grid-cols-3 items-center h-[64px] px-4 md:px-6 lg:px-8 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-3">
         <button
           onClick={onMobileMenuOpen}
           className="lg:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          aria-label="開啟選單"
+          aria-label="Открыть меню"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          儀表板
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg font-semibold text-foreground">Панель управления</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center">
+        <div className="flex items-center gap-3 header-actions">
+          <button onClick={() => { window.location.href = '/users'; }} className="btn btn--sm glow-gold">
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Добавить пользователя</span>
+          </button>
+          <button onClick={() => { window.location.href = '/builder'; }} className="btn btn--sm">
+            <Zap className="h-4 w-4" />
+            <span className="hidden sm:inline">Сборка APK</span>
+          </button>
+          <button onClick={() => window.location.reload()} className="btn btn--sm btn--ghost">
+            <RefreshCw className="h-4 w-4" />
+            <span className="hidden sm:inline">Обновить</span>
+          </button>
         </div>
       </div>
 
@@ -102,7 +119,7 @@ export default function Header({ onMobileMenuOpen }: { onMobileMenuOpen: () => v
                 <div className="flex items-center gap-1 mt-1">
                   <RoleIcon className={`h-3 w-3 ${role === 'admin' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`text-xs ${role === 'admin' ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                    {role === 'admin' ? '系統管理員' : '一般使用者'}
+                    {role === 'admin' ? 'Системный админ' : 'Обычный пользователь'}
                   </span>
                 </div>
               </div>
@@ -111,7 +128,7 @@ export default function Header({ onMobileMenuOpen }: { onMobileMenuOpen: () => v
                 className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-accent transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                登出
+                Выйти
               </button>
             </div>
           )}
