@@ -261,3 +261,20 @@ button, a, [role="button"] {
 .card {
   box-shadow: none !important;
 }
+
+/* Accessibility / contrast fixes added by assistant */
+/* Ensure readable text inside Cards and general muted text on dark background */
+.card, .card * {
+  color: var(--color-card-foreground) !important;
+}
+.card .text-muted-foreground, .text-muted-foreground {
+  color: rgba(255,255,255,0.78) !important;
+}
+.card p, .card label, .card span, .card .text-sm {
+  color: var(--color-card-foreground) !important;
+}
+
+/* slightly increase default small text for form labels inside cards */
+.card .text-sm { font-size: 0.98rem !important; }
+.card .text-xs { font-size: 0.9rem !important; }
+

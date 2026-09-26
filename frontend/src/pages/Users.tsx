@@ -265,21 +265,21 @@ export default function UsersPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm truncate">{user.username}</p>
+                        <p className="font-medium text-base truncate">{user.username}</p>
                         {isYou && (
-                          <Badge className="text-[10px] px-1.5 py-0 shrink-0">{t('pages.users.badges.you')}</Badge>
+                          <Badge className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.you')}</Badge>
                         )}
                         {user.isDefault === 1 && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">{t('pages.users.badges.primary')}</Badge>
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.primary')}</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {user.role === 'admin' ? (
-                          <Badge variant="default" className="gap-1 text-[10px] px-1.5 py-0">
+                          <Badge variant="default" className="gap-1 text-xs px-1.5 py-0">
                             <ShieldCheck className="h-2.5 w-2.5" /> {t('pages.users.roles.admin')}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">
+                          <Badge variant="secondary" className="gap-1 text-xs px-1.5 py-0">
                             <Shield className="h-2.5 w-2.5" /> {t('pages.users.roles.user')}
                           </Badge>
                         )}
@@ -321,7 +321,7 @@ export default function UsersPage() {
                 </div>
 
                 <div className="mt-3">
-                  <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                     <span>Permissions</span>
                     <span>
                       {user.role === 'admin'
