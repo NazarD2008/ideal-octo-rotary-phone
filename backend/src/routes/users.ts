@@ -38,6 +38,7 @@ export async function userRoutes(app: FastifyInstance) {
         role: u.role,
         permissions: resolvePermissions(u.role as UserRole, u.permissions),
         isDefault: u.isDefault,
+        bindingActive: (u as any).bindingActive || 0,
         createdAt: u.createdAt,
         lastLogin: u.lastLogin,
       })),
@@ -312,5 +313,61 @@ export async function userRoutes(app: FastifyInstance) {
     dbHelpers.addLog('ADMIN', 'USER', `User ${existingUser.username} deleted by admin`);
 
     return { success: true, message: 'User deleted successfully' };
+  });
+
+  // Admin: rotate a user's binding key (returns the new raw key once)
+  app.post('/api/users/:id/binding/rotate', {
+    preHandler: manageUsers,
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return reply.code(400).send({ success: false, error: 'Invalid user ID' });
+    }
+
+    const existingUser = dbHelpers.getUserById(userId);
+    if (!existingUser) {
+      return reply.code(404).send({ success: false, error: 'User not found' });
+    }
+
+    if (existingUser.isDefault === 1) {
+      return reply.code(403).send({ success: false, error: 'Cannot rotate binding for the default admin account' });
+    }
+
+    const rotated = dbHelpers.rotateUserBinding(userId);
+    if (!rotated) {
+      return reply.code(500).send({ success: false, error: 'Failed to rotate binding key' });
+    }
+
+    dbHelpers.addLog('ADMIN', 'USER', `Binding rotated for user ${existingUser.username} by admin`);
+    return { success: true, data: rotated };
+  });
+
+  // Admin: revoke a user's binding (removes key and machine binding)
+  app.post('/api/users/:id/binding/revoke', {
+    preHandler: manageUsers,
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const userId = parseInt(id, 10);
+    if (isNaN(userId)) {
+      return reply.code(400).send({ success: false, error: 'Invalid user ID' });
+    }
+
+    const existingUser = dbHelpers.getUserById(userId);
+    if (!existingUser) {
+      return reply.code(404).send({ success: false, error: 'User not found' });
+    }
+
+    if (existingUser.isDefault === 1) {
+      return reply.code(403).send({ success: false, error: 'Cannot revoke binding for the default admin account' });
+    }
+
+    const ok = dbHelpers.revokeUserBinding(userId);
+    if (!ok) {
+      return reply.code(500).send({ success: false, error: 'Failed to revoke binding' });
+    }
+
+    dbHelpers.addLog('ADMIN', 'USER', `Binding revoked for user ${existingUser.username} by admin`);
+    return { success: true, message: 'Binding revoked successfully' };
   });
 }
