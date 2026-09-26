@@ -6,6 +6,8 @@ import { Sun, Moon, Monitor, Check, LogOut, ShieldCheck, Shield, Plus, Zap, Refr
 import { getNavItems } from '@/config/navigation';
 import type { UserRole } from '@/types';
 
+import { useLocation } from 'react-router-dom';
+
 const themeOptions = [
   { value: 'light' as const, label: 'Светлая', icon: Sun },
   { value: 'dark' as const, label: 'Тёмная', icon: Moon },
