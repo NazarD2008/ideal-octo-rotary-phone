@@ -49,7 +49,7 @@ export default function UsersPage() {
         setUsers(res.data.data);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error || '加载用户失败');
+      setError(err?.response?.data?.error || '加载Пользователь失败');
     }
     setLoading(false);
   };
@@ -116,9 +116,9 @@ export default function UsersPage() {
         closeDialog();
         return;
       }
-      setDialogError(res.data.error || '创建用户失败');
+      setDialogError(res.data.error || '创建Пользователь失败');
     } catch (err: any) {
-      setDialogError(err?.response?.data?.error || '创建用户失败');
+      setDialogError(err?.response?.data?.error || '创建Пользователь失败');
     }
     setDialogLoading(false);
   };
@@ -134,9 +134,9 @@ export default function UsersPage() {
         closeDialog();
         return;
       }
-      setDialogError(res.data.error || '更新用户失败');
+      setDialogError(res.data.error || '更新Пользователь失败');
     } catch (err: any) {
-      setDialogError(err?.response?.data?.error || '更新用户失败');
+      setDialogError(err?.response?.data?.error || '更新Пользователь失败');
     }
     setDialogLoading(false);
   };
@@ -177,13 +177,13 @@ export default function UsersPage() {
   };
 
   const handleDelete = async (userId: number) => {
-    if (!confirm('您确定要删除此用户吗？')) return;
+    if (!confirm('您确定要删除此Пользователь吗？')) return;
     try {
       const res = await usersApi.delete(userId);
       if (res.data.success) {
         await fetchUsers();
       } else {
-        setError(res.data.error || '删除用户失败');
+        setError(res.data.error || '删除Пользователь失败');
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to delete user');
@@ -480,10 +480,10 @@ export default function UsersPage() {
                     </Button>
                   </div>
                   {formRole === 'admin' && (
-                    <p className="text-xs text-muted-foreground">管理员用户会自动拥有所有权限。</p>
+                    <p className="text-xs text-muted-foreground">管理员Пользователь会自动拥有所有权限。</p>
                   )}
                   {formRole === 'user' && (
-                    <p className="text-xs text-muted-foreground">普通用户的权限可以在创建后继续自定义。</p>
+                    <p className="text-xs text-muted-foreground">普通Пользователь的权限可以在创建后继续自定义。</p>
                   )}
                 </div>
               </div>

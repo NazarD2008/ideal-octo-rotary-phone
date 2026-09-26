@@ -50,15 +50,15 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
             <div className="h-16 w-16 mx-auto rounded-2xl bg-destructive/10 flex items-center justify-center">
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
-            <h2 className="text-xl font-semibold">页面出现异常</h2>
-            <p className="text-sm text-muted-foreground">发生了意外错误，请刷新页面后重试。</p>
+            <h2 className="text-xl font-semibold">Произошла ошибка</h2>
+            <p className="text-sm text-muted-foreground">Произошла непредвиденная ошибка. Обновите страницу и повторите попытку.</p>
             {this.state.error && import.meta.env.DEV && (
               <pre className="text-xs text-muted-foreground bg-muted p-3 rounded-lg overflow-auto max-h-32 text-left">
                 {this.state.error.message}
               </pre>
             )}
             <Button onClick={() => window.location.reload()} className="gap-2">
-              <RefreshCw className="h-4 w-4" /> 重新加载页面
+              <RefreshCw className="h-4 w-4" /> Перезагрузить страницу
             </Button>
           </div>
         </div>
@@ -163,8 +163,8 @@ function NotFoundPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="text-center space-y-4">
         <h1 className="text-6xl font-bold text-primary">404</h1>
-        <h2 className="text-xl font-semibold">页面不存在</h2>
-        <p className="text-muted-foreground">您访问的页面不存在。</p>
+        <h2 className="text-xl font-semibold">Страница не найдена</h2>
+        <p className="text-muted-foreground">您访问的Страница не найдена。</p>
         <Button onClick={() => window.location.href = '/'}>返回仪表板</Button>
       </div>
     </div>

@@ -10,13 +10,13 @@ const RoleBadge = ({ role }: { role: UserRole }) => {
   if (role === 'admin') {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] text-primary font-medium">
-        <ShieldCheck className="h-3 w-3" /> 系統管理員
+        <ShieldCheck className="h-3 w-3" /> Системный админ
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
-      <Shield className="h-3 w-3" /> 一般使用者
+      <Shield className="h-3 w-3" /> Обычный пользователь
     </span>
   );
 };
@@ -37,11 +37,11 @@ export default function Sidebar() {
   return (
     <div className="flex flex-col w-[260px] h-full bg-sidebar border-r border-sidebar-border">
       <div className="flex items-center gap-3 px-5 h-[57px] border-b border-sidebar-border shrink-0">
-        <span className="text-sm font-semibold text-sidebar-foreground leading-tight">控制面板</span>
+        <span className="text-sm font-semibold text-sidebar-foreground leading-tight">Панель управления</span>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3">
-        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground">主選單</p>
+        <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground">Главное меню</p>
         <div className="space-y-1">
           {navItems.map((item) => (
             <NavLink
@@ -76,7 +76,7 @@ export default function Sidebar() {
           <button
             onClick={handleLogout}
             className="text-sidebar-muted-foreground hover:text-sidebar-foreground transition-colors p-1 rounded-md hover:bg-sidebar-accent"
-            title="登出"
+            title="Выйти"
           >
             <LogOut className="h-4 w-4" />
           </button>

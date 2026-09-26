@@ -36,7 +36,7 @@ export default function MobileNav({ open, onClose }: MobileNavProps) {
       <div className="fixed inset-y-0 left-0 w-[280px] max-w-[85vw] bg-sidebar border-r border-sidebar-border shadow-xl flex flex-col">
         <div className="flex items-center justify-between px-5 h-[57px] border-b border-sidebar-border shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-sidebar-foreground leading-tight">控制面板</span>
+            <span className="text-sm font-semibold text-sidebar-foreground leading-tight">Панель управления</span>
           </div>
           <button onClick={onClose} className="text-sidebar-muted-foreground hover:text-sidebar-foreground transition-colors p-1 rounded-md hover:bg-sidebar-accent">
             <X className="h-5 w-5" />
@@ -44,7 +44,7 @@ export default function MobileNav({ open, onClose }: MobileNavProps) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3">
-          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground">主選單</p>
+          <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground">Главное меню</p>
           <div className="space-y-1">
             {navItems.map((item) => (
               <NavLink
@@ -76,14 +76,14 @@ export default function MobileNav({ open, onClose }: MobileNavProps) {
               <div className="flex items-center gap-1">
                 <RoleIcon className={`h-3 w-3 ${role === 'admin' ? 'text-primary' : 'text-muted-foreground'}`} />
                 <span className={`text-[10px] ${role === 'admin' ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                  {role === 'admin' ? '系統管理員' : '一般使用者'}
+                  {role === 'admin' ? 'Системный админ' : 'Обычный пользователь'}
                 </span>
               </div>
             </div>
             <button
               onClick={handleLogout}
               className="text-sidebar-muted-foreground hover:text-sidebar-foreground transition-colors p-1 rounded-md hover:bg-sidebar-accent"
-              title="登出"
+              title="Выйти"
             >
               <LogOut className="h-4 w-4" />
             </button>

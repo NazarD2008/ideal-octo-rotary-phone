@@ -47,15 +47,15 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex justify-center">
         <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="card p-4">Метрики</div>
-          <div className="card p-4">Статистика</div>
-          <div className="card p-4">Активность</div>
+          <div className="card p-4"></div>
+          <div className="card p-4"></div>
+          <div className="card p-4"></div>
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight gradient-gold">
-            {getGreeting()}, <span className="text-primary">{user?.username || 'з”Ёж€·'}</span>
+            {getGreeting()}, <span className="text-primary">{user?.username || 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ'}</span>
           </h1>
           <p className="text-muted-foreground mt-1">
             {t('pages.dashboard.welcome')}
