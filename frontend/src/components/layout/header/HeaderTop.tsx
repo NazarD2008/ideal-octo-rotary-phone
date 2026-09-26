@@ -38,9 +38,8 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen?: () 
         {/* Desktop actions: builder and profile; remove Add User from this area per request */}
         <div className="hidden md:flex items-center gap-2">
           {/* Builder link kept */}
-          <Button variant="ghost" onClick={() => navigate('/builder')} size="sm" className="gap-2">
-            <span className="hidden sm:inline">{t('nav.builder') || 'Сборка APK'}</span>
-          </Button>
+          {/* Builder link removed from top-right per request */}
+          <></>
         </div>
 
         <ThemeToggle />
