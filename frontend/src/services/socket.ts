@@ -119,7 +119,16 @@ export function initAdminSocket(onDeviceChange?: DeviceChangeListener): Socket {
   const token = getToken();
   const auth = token ? { token } : undefined;
 
-  const s = io({
+  // In development, connect directly to the backend Socket.IO server to avoid
+  // proxy race-conditions with the Vite dev server. In production (or when
+  // importing from an arbitrary origin) leave the default relative URL so the
+  // client can use the same origin / socket path.
+  const explicitUrl = typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env.DEV
+    ? 'http://localhost:32766'
+    : undefined;
+
+  const s = io(explicitUrl, {
+    path: '/socket.io',
     transports: ['websocket', 'polling'],
     autoConnect: true,
     reconnection: true,
