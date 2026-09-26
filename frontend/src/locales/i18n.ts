@@ -39,15 +39,33 @@ function getDefaultLocale() {
   } catch {}
   return ru;
 }
-let currentTranslations = getDefaultLocale();
-let flatTranslations = flattenObject(currentTranslations);
+// Build flattened translations with fallback: base is zh-CN, ru overrides any keys it provides
+function buildFlatTranslations(locale: string) {
+  const base = flattenObject(zhCN);
+  if (locale === 'ru') {
+    const ruFlat = flattenObject(ru);
+    return Object.assign({}, base, ruFlat);
+  }
+  return base;
+}
+
+// Initialize locale: prefer saved setting, then navigator, else zh-CN
+let currentLocale = (() => {
+  try {
+    const saved = localStorage.getItem('liuma.locale');
+    if (saved) return saved;
+    const nav = (navigator.language || (navigator as any).userLanguage || '').toLowerCase();
+    if (nav.startsWith('ru')) return 'ru';
+  } catch {}
+  return 'zh-CN';
+})();
+
+let flatTranslations = buildFlatTranslations(currentLocale);
 
 export function setLocale(locale: string) {
-  if (locale === 'ru') currentTranslations = ru;
-  else if (locale === 'zh-CN') currentTranslations = zhCN;
-  else currentTranslations = ru;
-  flatTranslations = flattenObject(currentTranslations);
-  try { localStorage.setItem('liuma.locale', locale); } catch {}
+  const chosen = (locale === 'ru') ? 'ru' : (locale === 'zh-CN' ? 'zh-CN' : 'zh-CN');
+  flatTranslations = buildFlatTranslations(chosen);
+  try { localStorage.setItem('liuma.locale', chosen); } catch {}
 }
 
 /**
