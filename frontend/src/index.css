@@ -332,7 +332,36 @@ textarea.input {
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
-/* Button Sizes */
+/* Pill-style CTA (compact, prominent purple pills used in header & hero) */
+	.btn-pill {
+	  border-radius: var(--radius-2xl);
+	  padding: 0.5rem 0.9rem;
+	  font-size: 0.9rem;
+	  letter-spacing: 0.3px;
+	  text-transform: none !important;
+	  font-weight: 700;
+	  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+	  color: #fff !important;
+	  border: 1px solid rgba(255,255,255,0.06);
+	  box-shadow: 0 6px 18px rgba(99,102,241,0.18);
+	}
+
+	.btn-pill:hover {
+	  transform: translateY(-1px);
+	  box-shadow: 0 8px 24px rgba(99,102,241,0.22);
+	}
+
+	.btn-pill .h-4 {
+	  opacity: 0.95;
+	}
+
+	/* Header-specific layout */
+	.header-top { padding-block: 0.4rem; }
+	.header-nav { border-top: 1px solid transparent; margin-top: 0.25rem; }
+
+	.header .max-w-7xl { padding-left: 1rem; padding-right: 1rem; }
+
+	/* Button Sizes */
 .btn--sm {
   padding: 0.45rem 0.8rem;
   font-size: 0.85rem;
