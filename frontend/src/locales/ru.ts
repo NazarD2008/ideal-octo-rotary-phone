@@ -157,6 +157,31 @@ export const ru = {
       title: 'Журнал',
     },
   },
+  settings: {
+    profile: {
+      title: 'Профиль',
+      description: 'Информация о вашей учётной записи',
+      savedSuccessfully: 'Профиль успешно сохранён',
+      saveProfile: 'Сохранить профиль',
+      saving: 'Сохранение профиля...',
+      username: 'Имя пользователя',
+      email: 'Email',
+      updateFailed: 'Не удалось обновить профиль',
+    },
+    changePassword: {
+      title: 'Сменить пароль',
+      description: 'Измените пароль вашей учётной записи',
+      changedSuccessfully: 'Пароль успешно изменён',
+      enterCurrentPassword: 'Введите текущий пароль',
+      enterNewPassword: 'Введите новый пароль',
+      confirmPassword: 'Подтвердите новый пароль',
+      passwordsMismatch: 'Пароли не совпадают',
+      minLength: 'Пароль должен быть не менее 6 символов',
+      changeFailed: 'Не удалось изменить пароль',
+      changing: 'Изменение пароля...',
+    },
+  },
+
 
   // Builder translations (used by Builder page and some legacy builder.* keys)
   builder: {
