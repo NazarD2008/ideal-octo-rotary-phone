@@ -27,7 +27,7 @@ export default function JobList({
     const el = document.querySelector(`[data-job-row=\"${justCreatedId}\"]`)
     if (el && 'scrollIntoView' in el) {
       (el as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' })
-      setTimeout(() => { (el as HTMLElement).classList.remove('job-row--highlight') }, 6000)
+      setTimeout(() => { (el as HTMLElement).classList.remove('job-row--highlight') }, 6000 as unknown as number)
     }
   }, [justCreatedId, jobs])
 

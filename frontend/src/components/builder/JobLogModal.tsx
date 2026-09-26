@@ -80,7 +80,7 @@ export default function JobLogModal({ jobId, open, onClose }: Props) {
     }, 2500)
 
     return () => {
-      if (unsub) unsub()
+      if (unsub) { (unsub as any)(); }
       if (pollHandle.current) { clearInterval(pollHandle.current); pollHandle.current = null }
     }
   }, [open, jobId])
@@ -89,7 +89,11 @@ export default function JobLogModal({ jobId, open, onClose }: Props) {
     if (!autoscroll) return
     const el = containerRef.current
     if (!el) return
-    setTimeout(() => { el.scrollTop = el.scrollHeight }, 50)
+    if (typeof (window as any)?.requestAnimationFrame === 'function') {
+      (window as any).requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+    } else {
+      (globalThis as any).setTimeout(() => { el.scrollTop = el.scrollHeight }, 50);
+    }
   }, [lines, autoscroll])
 
   const filtered = lines.filter(l => l.toLowerCase().includes(search.toLowerCase()))
@@ -97,7 +101,10 @@ export default function JobLogModal({ jobId, open, onClose }: Props) {
   const handleDownload = () => {
     if (!jobId) return
     const url = `/api/builder/job/${jobId}/log?download=1`
-    window.open(url, '_blank')
+    // window.open can be undefined in some test environments; guard it
+    if (typeof window !== 'undefined' && typeof window.open === 'function') {
+      window.open(url, '_blank')
+    }
   }
 
   return (

@@ -10,6 +10,7 @@ import type { UserRole, Permission } from '../types/index.js';
 
 export async function userRoutes(app: FastifyInstance) {
   const manageUsers = [app.auth, requirePermission('users:manage')];
+  const crypto = await import('crypto');
 
   app.get('/api/users/permissions-schema', {
     preHandler: manageUsers,
@@ -95,19 +96,29 @@ export async function userRoutes(app: FastifyInstance) {
     }
 
     const hash = await hashPassword(password);
-    const userId = dbHelpers.createUser(username, email, hash, userRole, userPermissions);
+
+    // Allow admin to request generation of a binding key that ties this account to a machine
+    const generateBinding = !!((request.body || {}) as any).generateBinding;
+    let bindingKey: string | undefined = undefined;
+    let bindingKeyHash: string | null = null;
+    if (generateBinding) {
+      bindingKey = crypto.randomBytes(24).toString('hex');
+      bindingKeyHash = crypto.createHash('sha256').update(bindingKey).digest('hex');
+    }
+
+    const userId = dbHelpers.createUser(username, email, hash, userRole, userPermissions, bindingKeyHash);
 
     dbHelpers.addLog('ADMIN', 'USER', `User ${username} created by admin`, JSON.stringify({ role: userRole }));
 
-    return {
-      success: true,
-      data: {
-        id: userId,
-        username: username.toLowerCase(),
-        email: email.toLowerCase(),
-        role: userRole,
-      },
+    const responseData: any = {
+      id: userId,
+      username: username.toLowerCase(),
+      email: email.toLowerCase(),
+      role: userRole,
     };
+    if (typeof bindingKey !== 'undefined' && bindingKey) responseData.bindingKey = bindingKey;
+
+    return { success: true, data: responseData };
   });
 
   app.put('/api/users/:id', {

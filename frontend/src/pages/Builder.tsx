@@ -690,7 +690,7 @@ export default function BuilderPage() {
         </Card>
       )}
 
-      <JobList selectedJobId={selectedJobId} onSelect={(id) => setSelectedJobId(id)} />
+      <JobList selectedJobId={selectedJobId} onSelect={(id: number) => setSelectedJobId(id)} />
     </div>
   );
 }

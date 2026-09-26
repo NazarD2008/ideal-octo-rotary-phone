@@ -10,6 +10,10 @@ export const users = sqliteTable('users', {
   isDefault: integer('is_default').default(0),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   lastLogin: text('last_login'),
+  // Optional binding key to tie a user account to a specific machine
+  bindingKeyHash: text('binding_key_hash'),
+  bindingMachine: text('binding_machine'),
+  bindingActive: integer('binding_active', { mode: 'boolean' }).default(0),
 });
 
 export const sessions = sqliteTable('sessions', {
@@ -17,6 +21,7 @@ export const sessions = sqliteTable('sessions', {
   token: text('token').notNull().unique(),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   ip: text('ip').notNull(),
+  machineHash: text('machine_hash'),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
   expiresAt: text('expires_at').notNull(),
 });

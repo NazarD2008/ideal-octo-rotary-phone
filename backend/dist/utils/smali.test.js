@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { patchSmaliContent } from './smali';
+import { patchSmaliContent } from './smali.js';
 function run() {
     console.log('smali tests: starting');
     // Server field replacement

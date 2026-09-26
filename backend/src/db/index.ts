@@ -248,6 +248,18 @@ export function initDb(): DB {
         sqliteDb.prepare('UPDATE users SET permissions = ? WHERE id = ?').run(perms, u.id);
       }
     }
+
+    // Migrate: add binding columns for user-machine binding
+    if (!columnNames.includes('binding_key_hash')) {
+      log.info('Adding user binding columns (binding_key_hash, binding_machine, binding_active)');
+      try {
+        sqliteDb.exec(`ALTER TABLE users ADD COLUMN binding_key_hash TEXT`);
+        sqliteDb.exec(`ALTER TABLE users ADD COLUMN binding_machine TEXT`);
+        sqliteDb.exec(`ALTER TABLE users ADD COLUMN binding_active INTEGER DEFAULT 0`);
+      } catch (e) {
+        log.warn(`Failed to add binding columns: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
   } catch (err: unknown) {
     log.warn(`Migration warning: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -444,7 +456,7 @@ export const dbHelpers = {
     }).from(users).orderBy(desc(users.id)).all();
   },
 
-  createUser(username: string, email: string, passwordHash: string, role: 'admin' | 'user' = 'user', permissions?: Permission[]): number {
+  createUser(username: string, email: string, passwordHash: string, role: 'admin' | 'user' = 'user', permissions?: Permission[], bindingKeyHash?: string|null): number {
     const d = getDb();
     const perms = role === 'admin' ? JSON.stringify(ALL_PERMISSIONS) : JSON.stringify(permissions || DEFAULT_USER_PERMISSIONS);
     const result = d.insert(users).values({
@@ -453,8 +465,16 @@ export const dbHelpers = {
       password: passwordHash,
       role,
       permissions: perms,
+      bindingKeyHash: bindingKeyHash || null,
+      bindingMachine: null,
+      bindingActive: 0,
     }).run();
     return result.lastInsertRowid as number;
+  },
+  bindUserMachine(userId: number, machineHash: string): boolean {
+    const d = getDb();
+    const result = d.update(users).set({ bindingMachine: machineHash, bindingActive: 1 }).where(eq(users.id, userId)).run();
+    return result.changes > 0;
   },
 
   updateUser(id: number, data: { username?: string; email?: string; role?: 'admin' | 'user'; permissions?: string }): boolean {
