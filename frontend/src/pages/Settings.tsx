@@ -58,11 +58,11 @@ export default function SettingsPage() {
 
   const handlePasswordChange = async () => {
     if (newPassword !== confirmNewPassword) {
-      setPasswordError('两次输入的密码不一致');
+      setPasswordError(t('settings.changePassword.passwordsMismatch'));
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError('密码至少需要 6 个字符');
+      setPasswordError(t('settings.changePassword.minLength'));
       return;
     }
     setPasswordSaving(true);

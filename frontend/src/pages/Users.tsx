@@ -142,7 +142,7 @@ export default function UsersPage() {
       }
       setDialogError(res.data.error || t('users.errors.updateFailed'));
     } catch (err: any) {
-      setDialogError(err?.response?.data?.error || '更新Пользователь失败');
+      setDialogError(err?.response?.data?.error || '');
     }
     setDialogLoading(false);
   };
@@ -157,7 +157,7 @@ export default function UsersPage() {
         closeDialog();
         return;
       }
-      setDialogError(res.data.error || '重置密码失败');
+      setDialogError(res.data.error || '');
     } catch (err: any) {
       setDialogError(err?.response?.data?.error || t('users.errors.resetPasswordFailed'));
     }
@@ -175,7 +175,7 @@ export default function UsersPage() {
         closeDialog();
         return;
       }
-      setDialogError(res.data.error || '更新权限失败');
+      setDialogError(res.data.error || '');
     } catch (err: any) {
       setDialogError(err?.response?.data?.error || t('users.errors.updatePermissionsFailed'));
     }
@@ -189,7 +189,7 @@ export default function UsersPage() {
       if (res.data.success) {
         await fetchUsers();
       } else {
-        setError(res.data.error || '删除Пользователь失败');
+        setError(res.data.error || '');
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || t('users.errors.deleteFailed'));
