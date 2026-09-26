@@ -36,6 +36,37 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.code(401).send({ success: false, error: 'Invalid credentials' });
     }
 
+    // Binding key / machine binding logic
+    const bindingKeyInput = ((request.body || {}) as any).bindingKey as string | undefined;
+    const userBindingHash = (user as any).bindingKeyHash as string | null | undefined;
+    const userBindingActive = (user as any).bindingActive as number | null | undefined;
+
+    const ua = String(request.headers['user-agent'] || '');
+    const machineHash = crypto.createHash('sha256').update(`${ua}|${ip}`).digest('hex');
+
+    if (userBindingHash) {
+      // If already bound to a machine, require same machine
+      if (userBindingActive) {
+        if (!user.bindingMachine || user.bindingMachine !== machineHash) {
+          dbHelpers.addLog('AUTH', 'LOGIN', `Failed binding check for user ${user.username}`, JSON.stringify({ ip, ua }));
+          return reply.code(401).send({ success: false, error: 'This account is bound to a different machine' });
+        }
+      } else {
+        // Not bound yet: require binding key to activate binding
+        if (!bindingKeyInput) {
+          return reply.code(401).send({ success: false, error: 'Binding key required for this account' });
+        }
+        const bindingKeyHash = crypto.createHash('sha256').update(bindingKeyInput).digest('hex');
+        if (bindingKeyHash !== userBindingHash) {
+          dbHelpers.recordLoginAttempt(ip);
+          dbHelpers.addLog('AUTH', 'LOGIN', `Invalid binding key for user ${user.username}`, JSON.stringify({ ip }));
+          return reply.code(401).send({ success: false, error: 'Invalid binding key' });
+        }
+        // Activate binding to this machine
+        dbHelpers.bindUserMachine(user.id, machineHash);
+      }
+    }
+
     const sessionToken = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + config.security.sessionTimeout).toISOString();
 
@@ -44,6 +75,7 @@ export async function authRoutes(app: FastifyInstance) {
       token: sessionToken,
       userId: user.id,
       ip,
+      machineHash,
       expiresAt,
     }).run();
 

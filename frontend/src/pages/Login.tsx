@@ -19,11 +19,13 @@ export default function LoginPage() {
   const { resolvedTheme, setTheme, theme } = useThemeStore();
   const navigate = useNavigate();
 
+  const [bindingKey, setBindingKey] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     setIsLockedOut(false);
-    const success = await login(username, password);
+    const success = await login(username, password, bindingKey);
     if (success) {
       navigate('/');
     } else {
@@ -90,6 +92,12 @@ export default function LoginPage() {
                 disabled={isLockedOut}
                 className="tech-border"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bindingKey">Ключ привязки (если есть)</Label>
+              <Input id="bindingKey" type="text" placeholder="Binding key" value={bindingKey} onChange={(e) => setBindingKey(e.target.value)} className="tech-border" />
+              <p className="text-xs text-muted-foreground">Если учётная запись привязана к машине, необходимо ввести ключ привязки при первом входе с этой машины.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-foreground">{t('auth.login.password')}</Label>

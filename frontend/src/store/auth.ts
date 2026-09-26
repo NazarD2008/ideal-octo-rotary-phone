@@ -70,10 +70,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isChecking: true,
   error: null,
 
-  login: async (username, password) => {
+  login: async (username, password, bindingKey?: string) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await authApi.login(username, password);
+      const res = await authApi.login(username, password, bindingKey);
       if (res.data.success) {
         const data = res.data.data;
         // Store JWT token separately for socket auth (not in auth-user to limit XSS exposure)
