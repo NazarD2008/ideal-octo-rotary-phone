@@ -17,9 +17,9 @@ import { formatDate } from '@/lib/utils';
 import { t } from '@/locales/i18n';
 
 interface UserDialog {
-  mode: 'create' | 'edit' | 'resetPassword' | 'permissions';
+  mode: 'create' | 'edit' | 'resetPassword' | 'permissions' | 'showBindingKey';
   userId?: number;
-  initialData?: Partial<UserItem>;
+  initialData?: Partial<UserItem> & { bindingKey?: string };
 }
 
 export default function UsersPage() {
@@ -107,10 +107,16 @@ export default function UsersPage() {
     try {
       const res = await usersApi.create({ username: formUsername, email: formEmail, password: formPassword, role: formRole, permissions: formRole === 'user' ? formPermissions : undefined, generateBinding: generateBindingKey });
       if (res.data.success) {
-        // If server returned a bindingKey, show it to admin
+        // If server returned a bindingKey, open a modal to show it to admin
         if (res.data.data?.bindingKey) {
           const key = res.data.data.bindingKey as string;
-          alert(`Binding key generated: ${key}\nPlease copy and deliver it securely to the user.`);
+          // close create dialog and open a small binding key dialog
+          setDialog(null);
+          setTimeout(() => {
+            setDialog({ mode: 'showBindingKey', initialData: { username: formUsername, bindingKey: key } });
+          }, 120);
+          await fetchUsers();
+          return;
         }
         await fetchUsers();
         closeDialog();
@@ -261,20 +267,20 @@ export default function UsersPage() {
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm truncate">{user.username}</p>
                         {isYou && (
-                          <Badge className="text-[10px] px-1.5 py-0 shrink-0">{t('users.badges.you')}</Badge>
+                          <Badge className="text-[10px] px-1.5 py-0 shrink-0">{t('pages.users.badges.you')}</Badge>
                         )}
                         {user.isDefault === 1 && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">{t('users.badges.primary')}</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">{t('pages.users.badges.primary')}</Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {user.role === 'admin' ? (
                           <Badge variant="default" className="gap-1 text-[10px] px-1.5 py-0">
-                            <ShieldCheck className="h-2.5 w-2.5" /> {t('users.roles.admin')}
+                            <ShieldCheck className="h-2.5 w-2.5" /> {t('pages.users.roles.admin')}
                           </Badge>
                         ) : (
                           <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">
-                            <Shield className="h-2.5 w-2.5" /> {t('users.roles.user')}
+                            <Shield className="h-2.5 w-2.5" /> {t('pages.users.roles.user')}
                           </Badge>
                         )}
                       </div>
@@ -289,7 +295,7 @@ export default function UsersPage() {
                     )}
                     {user.role !== 'admin' && user.isDefault !== 1 && (
                       <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openPermissionsDialog(user)}>
-                        {t('users.buttons.permissions')}
+                        {t('pages.users.buttons.permissions')}
                       </Button>
                     )}
                     {user.isDefault !== 1 && (
@@ -338,32 +344,38 @@ export default function UsersPage() {
       </div>
 
       <Dialog open={dialog !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>
-        <DialogContent className={dialog?.mode === 'permissions' ? 'max-w-lg' : 'max-w-md'}>
+        <DialogContent className={dialog?.mode === 'permissions' ? 'max-w-lg' : dialog?.mode === 'showBindingKey' ? 'max-w-sm' : 'max-w-md'}>
           <DialogHeader>
+              {dialog?.mode === 'showBindingKey' && (
+                <div className="flex flex-col items-start gap-2">
+                  <h3 className="text-lg font-semibold">{t('pages.users.dialogs.bindingKey.title') || 'Ключ привязки'}</h3>
+                  <p className="text-xs text-muted-foreground">{t('pages.users.dialogs.bindingKey.description') || 'Скопируйте ключ и передайте его пользователю безопасным способом.'}</p>
+                </div>
+              )}
             <DialogTitle>
-              {dialog?.mode === 'create' && t('users.dialogs.createUser.title')}
+              {dialog?.mode === 'create' && t('pages.users.dialogs.createUser.title')}
                   {dialog?.mode === 'create' && (
                     <div className="mt-2 text-xs text-muted-foreground">
                       <label className="inline-flex items-center gap-2">
                         <input type="checkbox" checked={generateBindingKey} onChange={(e) => setGenerateBindingKey(e.target.checked)} />
-                        <span> Генерировать ключ привязки для этой учётной записи</span>
+                        <span> {t('pages.users.dialogs.createUser.generateBinding')}</span>
                       </label>
                     </div>
                   )}
-              {dialog?.mode === 'edit' && t('users.dialogs.editUser.title')}
-              {dialog?.mode === 'resetPassword' && t('users.dialogs.resetPassword.title')}
+              {dialog?.mode === 'edit' && t('pages.users.dialogs.editUser.title')}
+              {dialog?.mode === 'resetPassword' && t('pages.users.dialogs.resetPassword.title')}
               {dialog?.mode === 'permissions' && (
                 <span className="flex items-center gap-2">
                   <Lock className="h-5 w-5 text-primary" />
-                  {t('users.dialogs.permissions.title')} — {dialog?.initialData?.username}
+                  {t('pages.users.dialogs.permissions.title')} — {dialog?.initialData?.username}
                 </span>
               )}
             </DialogTitle>
             <DialogDescription>
-              {dialog?.mode === 'create' && t('users.dialogs.createUser.description')}
-              {dialog?.mode === 'edit' && t('users.dialogs.editUser.description')}
-              {dialog?.mode === 'resetPassword' && t('users.dialogs.resetPassword.description', { username: dialog?.initialData?.username || '' })}
-              {dialog?.mode === 'permissions' && t('users.dialogs.permissions.description', { username: dialog?.initialData?.username || '' })}
+              {dialog?.mode === 'create' && t('pages.users.dialogs.createUser.description')}
+              {dialog?.mode === 'edit' && t('pages.users.dialogs.editUser.description')}
+              {dialog?.mode === 'resetPassword' && t('pages.users.dialogs.resetPassword.description', { username: dialog?.initialData?.username || '' })}
+              {dialog?.mode === 'permissions' && t('pages.users.dialogs.permissions.description', { username: dialog?.initialData?.username || '' })}
             </DialogDescription>
           </DialogHeader>
 
@@ -377,11 +389,11 @@ export default function UsersPage() {
 
             {dialog?.mode === 'resetPassword' ? (
               <div className="space-y-2">
-                <Label htmlFor="reset-password">{t('users.dialogs.resetPassword.newPassword')}</Label>
+                <Label htmlFor="reset-password">{t('pages.users.dialogs.resetPassword.newPassword')}</Label>
                 <Input
                   id="reset-password"
                   type="password"
-                  placeholder={t('users.dialogs.resetPassword.enterNewPassword')}
+                  placeholder={t('pages.users.dialogs.resetPassword.enterNewPassword')}
                   value={formPassword}
                   onChange={(e) => setFormPassword(e.target.value)}
                 />
@@ -426,39 +438,39 @@ export default function UsersPage() {
             ) : (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="form-username">{t('users.fields.username')}</Label>
+                  <Label htmlFor="form-username">{t('pages.users.fields.username')}</Label>
                   <Input
                     id="form-username"
                     type="text"
-                    placeholder={t('users.fields.username')}
+                    placeholder={t('pages.users.fields.username')}
                     value={formUsername}
                     onChange={(e) => setFormUsername(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="form-email">{t('users.fields.email')}</Label>
+                  <Label htmlFor="form-email">{t('pages.users.fields.email')}</Label>
                   <Input
                     id="form-email"
                     type="email"
-                    placeholder={t('users.fields.email')}
+                    placeholder={t('pages.users.fields.email')}
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
                   />
                 </div>
                 {dialog?.mode === 'create' && (
                   <div className="space-y-2">
-                    <Label htmlFor="form-password">{t('users.fields.password')}</Label>
+                    <Label htmlFor="form-password">{t('pages.users.fields.password')}</Label>
                     <Input
                       id="form-password"
                       type="password"
-                      placeholder={t('users.fields.password')}
+                      placeholder={t('pages.users.fields.password')}
                       value={formPassword}
                       onChange={(e) => setFormPassword(e.target.value)}
                     />
                   </div>
                 )}
                 <div className="space-y-2">
-                  <Label>{t('users.fields.role')}</Label>
+                  <Label>{t('pages.users.fields.role')}</Label>
                   <div className="flex gap-2">
                     <Button
                       type="button"
@@ -467,7 +479,7 @@ export default function UsersPage() {
                       onClick={() => { setFormRole('admin'); setFormPermissions([...ALL_PERMISSIONS]); }}
                       className="gap-1"
                     >
-                      <ShieldCheck className="h-3 w-3" /> {t('users.roles.admin')}
+                      <ShieldCheck className="h-3 w-3" /> {t('pages.users.roles.admin')}
                     </Button>
                     <Button
                       type="button"
@@ -476,7 +488,7 @@ export default function UsersPage() {
                       onClick={() => { setFormRole('user'); setFormPermissions([...DEFAULT_USER_PERMISSIONS]); }}
                       className="gap-1"
                     >
-                      <Shield className="h-3 w-3" /> {t('users.roles.user')}
+                      <Shield className="h-3 w-3" /> {t('pages.users.roles.user')}
                     </Button>
                   </div>
                   {formRole === 'admin' && (

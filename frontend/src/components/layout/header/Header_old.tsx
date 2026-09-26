@@ -75,7 +75,7 @@ export default function Header({ onMobileMenuOpen }: { onMobileMenuOpen: () => v
             <div className="hidden md:flex items-center gap-2">
               <button onClick={() => navigate('/users')} className="btn btn--sm btn--primary">
                 <Plus className="h-4 w-4" />
-                <span>Добавить пользователя</span>
+                <></>
               </button>
               <button onClick={() => navigate('/builder')} className="btn btn--sm btn--secondary">
                 <Zap className="h-4 w-4" />

@@ -104,7 +104,7 @@ export const ru = {
     users: {
       title: 'Пользователи',
       description: 'Создавайте и управляйте учетными записями',
-      addUser: 'Добавить пользователя',
+      addUser: 'Добавить пользователя', // left in header, moved back to top-left later
       searchPlaceholder: 'Поиск по имени или email',
       noUsers: 'Пользователи не найдены',
       tryDifferentSearch: 'Попробуйте другой запрос',
