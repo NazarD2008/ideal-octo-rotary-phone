@@ -4,6 +4,7 @@ import { Zap, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ThemeToggle from './ThemeToggle';
 import ProfileMenu from './ProfileMenu';
+import HeaderNav from './HeaderNav';
 import { t } from '@/locales/i18n';
 
 export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () => void }) {
