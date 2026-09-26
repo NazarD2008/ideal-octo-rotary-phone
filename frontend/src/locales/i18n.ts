@@ -14,12 +14,16 @@ function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, st
 
 const flatTranslations = flattenObject(ru as Record<string, any>);
 
+function escapeRegExp(s: string): string {
+  // escape characters that have special meaning in RegExp
+  return s.replace(/[.*+?^${}()|[\]\]/g, '\$&');
+}
+
 export function t(key: string, params?: Record<string, string | number>): string {
   let translation = flatTranslations[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      // escape any regex special chars in key
-      const safeKey = String(k).replace(/[.*+?^${}()|[\]\]/g, '\$&');
+      const safeKey = escapeRegExp(String(k));
       const re = new RegExp('\{' + safeKey + '\}', 'g');
       translation = translation.replace(re, String(v));
     }
