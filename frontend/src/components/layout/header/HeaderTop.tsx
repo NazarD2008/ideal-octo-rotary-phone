@@ -39,9 +39,7 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen?: () 
           <Button onClick={() => navigate('/users')} size="sm" className="gap-2 btn-pill">
             <Plus className="h-4 w-4" /> {t('pages.users.addUser')}
           </Button>
-          <Button onClick={() => navigate('/builder')} size="sm" variant="outline" className="gap-2 btn-pill">
-            <Zap className="h-4 w-4" /> {t('nav.builder') || 'Сборка APK'}
-          </Button>
+          
         </div>
 
         <ThemeToggle />
