@@ -95,6 +95,30 @@
 :root.light .gradient-gold { -webkit-text-fill-color: initial; color: var(--color-primary-foreground); background: none; }
 
 /* Prevent scanline overlay from overpowering content */
+/* Utility mappings: connect CSS variable tokens to class names used in components */
+.bg-background { background: var(--color-background) !important; }
+.text-foreground { color: var(--color-foreground) !important; }
+.bg-card { background: var(--color-card) !important; }
+.text-card-foreground { color: var(--color-card-foreground) !important; }
+.border-border { border-color: var(--color-border) !important; }
+.bg-popover { background: var(--color-popover) !important; }
+.text-popover-foreground { color: var(--color-popover-foreground) !important; }
+.text-muted-foreground { color: var(--color-muted-foreground) !important; }
+.bg-sidebar { background: var(--color-sidebar) !important; }
+.text-sidebar-foreground { color: var(--color-sidebar-foreground) !important; }
+.border-sidebar-border { border-color: var(--color-sidebar-border) !important; }
+.bg-sidebar-accent { background: var(--color-sidebar-accent) !important; }
+.text-sidebar-accent-foreground { color: var(--color-sidebar-accent-foreground) !important; }
+.text-primary { color: var(--color-primary) !important; }
+.text-destructive { color: var(--color-destructive) !important; }
+.bg-primary { background: var(--color-primary) !important; }
+
+/* Small layout helpers */
+.header-actions { display: flex; gap: 0.5rem; align-items: center; }
+.header-actions .btn { min-width: 88px; }
+
+
+
 body::after { opacity: 0.06; }
 
 /* Keep tech grid subtle on light theme */
