@@ -45,6 +45,6 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen?: () 
         <ThemeToggle />
         <ProfileMenu />
       </div>
-    </div>
+    </header>
   );
 }
