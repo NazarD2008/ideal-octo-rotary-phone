@@ -147,14 +147,6 @@ export default {
       viewLog: 'Показать лог',
     }
   },
-
-  settings: {
-    profile: { title: 'Профиль', username: 'Имя пользователя', email: 'Email', saveProfile: 'Сохранить профиль' },
-  },
-
-  logs: {
-    title: 'Журнал',
-  },
   users: {
     errors: {
       fetchFailed: 'Не удалось загрузить список пользователей',
@@ -165,5 +157,13 @@ export default {
       deleteFailed: 'Не удалось удалить пользователя',
     },
     confirm: { delete: 'Вы уверены, что хотите удалить этого пользователя?' }
-  }
+  },
+
+  settings: {
+    profile: { title: 'Профиль', username: 'Имя пользователя', email: 'Email', saveProfile: 'Сохранить профиль' },
+  },
+
+  logs: {
+    title: 'Журнал',
+  },
 };
