@@ -10,7 +10,7 @@ interface AuthState {
   isLoading: boolean;
   isChecking: boolean;
   error: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, bindingKey?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
