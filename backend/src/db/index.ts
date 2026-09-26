@@ -477,6 +477,21 @@ export const dbHelpers = {
     return result.changes > 0;
   },
 
+  revokeUserBinding(userId: number): boolean {
+    const d = getDb();
+    const result = d.update(users).set({ bindingKeyHash: null, bindingMachine: null, bindingActive: 0 }).where(eq(users.id, userId)).run();
+    return result.changes > 0;
+  },
+
+  rotateUserBinding(userId: number): { newKey: string } | null {
+    const newKey = crypto.randomBytes(24).toString('hex');
+    const newHash = crypto.createHash('sha256').update(newKey).digest('hex');
+    const d = getDb();
+    const result = d.update(users).set({ bindingKeyHash: newHash, bindingMachine: null, bindingActive: 0 }).where(eq(users.id, userId)).run();
+    if (result.changes > 0) return { newKey };
+    return null;
+  },
+
   updateUser(id: number, data: { username?: string; email?: string; role?: 'admin' | 'user'; permissions?: string }): boolean {
     const d = getDb();
     // Sanitize permissions: ensure it is valid JSON and only contains known permissions

@@ -54,12 +54,15 @@ export default function UsersPage() {
     setLoading(false);
   };
 
+  const [generateBindingKey, setGenerateBindingKey] = useState(false);
+
   const openCreateDialog = () => {
     setFormUsername('');
     setFormEmail('');
     setFormPassword('');
     setFormRole('user');
     setFormPermissions([...DEFAULT_USER_PERMISSIONS]);
+    setGenerateBindingKey(false);
     setDialogError(null);
     setDialog({ mode: 'create' });
   };
@@ -102,8 +105,13 @@ export default function UsersPage() {
     setDialogLoading(true);
     setDialogError(null);
     try {
-      const res = await usersApi.create({ username: formUsername, email: formEmail, password: formPassword, role: formRole, permissions: formRole === 'user' ? formPermissions : undefined });
+      const res = await usersApi.create({ username: formUsername, email: formEmail, password: formPassword, role: formRole, permissions: formRole === 'user' ? formPermissions : undefined, generateBinding: generateBindingKey });
       if (res.data.success) {
+        // If server returned a bindingKey, show it to admin
+        if (res.data.data?.bindingKey) {
+          const key = res.data.data.bindingKey as string;
+          alert(`Binding key generated: ${key}\nPlease copy and deliver it securely to the user.`);
+        }
         await fetchUsers();
         closeDialog();
         return;
@@ -334,6 +342,14 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle>
               {dialog?.mode === 'create' && t('users.dialogs.createUser.title')}
+                  {dialog?.mode === 'create' && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      <label className="inline-flex items-center gap-2">
+                        <input type="checkbox" checked={generateBindingKey} onChange={(e) => setGenerateBindingKey(e.target.checked)} />
+                        <span> Генерировать ключ привязки для этой учётной записи</span>
+                      </label>
+                    </div>
+                  )}
               {dialog?.mode === 'edit' && t('users.dialogs.editUser.title')}
               {dialog?.mode === 'resetPassword' && t('users.dialogs.resetPassword.title')}
               {dialog?.mode === 'permissions' && (
