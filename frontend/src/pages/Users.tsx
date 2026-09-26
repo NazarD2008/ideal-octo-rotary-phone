@@ -411,7 +411,7 @@ export default function UsersPage() {
                               }`}
                             >
                               <span
-                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ${
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-card shadow transition duration-200 ${
                                   isEnabled ? 'translate-x-4' : 'translate-x-0'
                                 }`}
                               />

@@ -97,7 +97,7 @@ export default function SmsPage() {
                       <span className="flex items-center gap-1.5">
                         {sms.address || '-'}
                         {isNew && (
-                          <Badge className="text-[9px] px-1 py-0 bg-green-500/90 text-white animate-pulse">
+                          <Badge className="text-[9px] px-1 py-0 bg-green-500/90 text-card-foreground animate-pulse">
                             New
                           </Badge>
                         )}

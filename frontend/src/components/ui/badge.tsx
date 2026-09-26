@@ -9,8 +9,8 @@ function Badge({ className, variant = "default", ...props }: React.ComponentProp
     secondary: "border-transparent bg-secondary text-secondary-foreground",
     destructive: "border-transparent bg-destructive text-destructive-foreground",
     outline: "text-foreground",
-    success: "border-transparent bg-success text-white",
-    warning: "border-transparent bg-warning text-white",
+    success: "border-transparent bg-success text-card-foreground",
+    warning: "border-transparent bg-warning text-card-foreground",
   }
 
   return (

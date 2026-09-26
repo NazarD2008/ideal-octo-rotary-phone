@@ -18,7 +18,10 @@ export function t(key: string, params?: Record<string, string | number>): string
   let translation = flatTranslations[key] ?? key;
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      translation = translation.replace(new RegExp(`\{${k}\}`, 'g'), String(v));
+      // escape any regex special chars in key
+      const safeKey = String(k).replace(/[.*+?^${}()|[\]\]/g, '\$&');
+      const re = new RegExp('\{' + safeKey + '\}', 'g');
+      translation = translation.replace(re, String(v));
     }
   }
   return translation;

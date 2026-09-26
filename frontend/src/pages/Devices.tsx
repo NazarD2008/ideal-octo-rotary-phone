@@ -162,7 +162,7 @@ export default function DevicesPage() {
                         <TableCell className="text-xs text-muted-foreground">{formatDate(client.lastSeen)}</TableCell>
                         <TableCell>
                           {client.online ? (
-                            <Badge className="bg-success text-white border-0">{t('common.online')}</Badge>
+                            <Badge className="bg-success text-card-foreground border-0">{t('common.online')}</Badge>
                           ) : (
                             <Badge variant="secondary">{t('common.offline')}</Badge>
                           )}
@@ -200,7 +200,7 @@ export default function DevicesPage() {
                         <div className="flex items-center gap-2">
                           <p className="font-medium truncate">{client.deviceModel || 'Unknown'}</p>
                           {client.online ? (
-                            <Badge className="bg-success text-white border-0 text-[10px] px-1.5 py-0">{t('common.online')}</Badge>
+                            <Badge className="bg-success text-card-foreground border-0 text-[10px] px-1.5 py-0">{t('common.online')}</Badge>
                           ) : (
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t('common.offline')}</Badge>
                           )}

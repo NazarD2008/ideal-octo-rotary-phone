@@ -53,9 +53,9 @@ export default function LogsPage() {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'ERROR': return <Badge variant="destructive">{type}</Badge>;
-      case 'WARNING': return <Badge className="bg-warning text-white border-0">{type}</Badge>;
-      case 'SUCCESS': return <Badge className="bg-success text-white border-0">{type}</Badge>;
-      case 'CONNECTION': return <Badge className="bg-success text-white border-0">{type}</Badge>;
+      case 'WARNING': return <Badge className="bg-warning text-card-foreground border-0">{type}</Badge>;
+      case 'SUCCESS': return <Badge className="bg-success text-card-foreground border-0">{type}</Badge>;
+      case 'CONNECTION': return <Badge className="bg-success text-card-foreground border-0">{type}</Badge>;
       case 'DISCONNECTION': return <Badge variant="secondary">{type}</Badge>;
       case 'INFO': return <Badge>{type}</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;

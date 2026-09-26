@@ -613,7 +613,7 @@ export default function HvncPage() {
                 </div>
               )}
               {connected && (
-                <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-semibold text-white">
+                <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-semibold text-card-foreground">
                   <Radio className="h-3 w-3 animate-pulse" /> HVNC
                 </div>
               )}
