@@ -31,6 +31,7 @@ import {
   Volume2,
 } from 'lucide-react';
 
+import { t } from '@/locales/i18n';
 type ConnectionState = 'disconnected' | 'connecting' | 'connected';
 type GesturePoint = DevicePoint;
 type ScreenInfoMessage = {
@@ -501,10 +502,10 @@ export default function ScreenPage() {
   return (
     <div className="space-y-5">
       <DevicePageHeader
-        title="Remote Desktop (WebRTC)"
-        subtitle={connected ? `Encrypted ${connectionMode || 'WebRTC'} session` : 'Low-latency remote screen and touch control'}
+        title={t("pages.device.screen.title")} 
+        subtitle={connected ? t('pages.device.screen.subtitle.encrypted', {mode: connectionMode || t('pages.device.screen.subtitle.webRtc')}) : t('pages.device.screen.subtitle.short')}
         commandStatus={commandStatus}
-        badge={connected ? { label: 'LIVE', variant: 'destructive', className: 'animate-pulse' } : undefined}
+        badge={connected ? { label: '{t('pages.device.screen.liveBadge')}', variant: 'destructive', className: 'animate-pulse' } : undefined}
         actions={connected ? [{ label: 'Disconnect', icon: Unplug, onClick: handleDisconnect, variant: 'destructive' }] : []}
       />
 
@@ -512,7 +513,7 @@ export default function ScreenPage() {
         <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4">
           <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
           <div>
-            <p className="text-sm font-medium">Accessibility Service required</p>
+            <p className="text-sm font-medium">{t('pages.device.screen.accessibilityRequired')}</p>
             <p className="text-xs text-muted-foreground">Enable Remote Control Service on the device for touch and navigation.</p>
           </div>
         </div>
@@ -521,7 +522,7 @@ export default function ScreenPage() {
         <div className="flex items-start gap-3 rounded-xl border border-warning/30 bg-warning/5 p-4">
           <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
           <div>
-            <p className="text-sm font-medium">TURN relay is not configured</p>
+            <p className="text-sm font-medium">{t('pages.device.screen.turnNotConfigured')}</p>
             <p className="text-xs text-muted-foreground">P2P can still work, but cross-network access is not guaranteed behind CGNAT or strict firewalls.</p>
           </div>
         </div>
@@ -566,21 +567,21 @@ export default function ScreenPage() {
                 {connecting ? (
                   <>
                     <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                    <p className="text-sm font-semibold text-primary">Waiting for device screen permission…</p>
+                    <p className="text-sm font-semibold text-primary">{t('pages.device.screen.waitingPermission')}</p>
                   </>
                 ) : (
                   <>
                     <button onClick={handleConnect} disabled={!online} className="rounded-full bg-primary p-8 shadow-lg disabled:opacity-50">
                       {online ? <Plug className="h-16 w-16 text-primary-foreground" /> : <Monitor className="h-16 w-16 text-muted-foreground" />}
                     </button>
-                    <p className="font-semibold">{online ? 'Connect with WebRTC' : 'Device is offline'}</p>
+                    <p className="font-semibold">{online ? '{t('pages.device.screen.connect')}' : '{t('pages.device.screen.deviceOffline')}'}</p>
                   </>
                 )}
               </div>
             )}
             {connected && (
               <div className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-red-500/90 px-2.5 py-1 text-[10px] font-semibold text-card-foreground">
-                <Radio className="h-3 w-3 animate-pulse" /> LIVE
+                <Radio className="h-3 w-3 animate-pulse" /> {t('pages.device.screen.liveBadge')}
               </div>
             )}
           </div>
@@ -612,7 +613,7 @@ export default function ScreenPage() {
             value={textInput}
             onChange={(event) => setTextInput(event.target.value)}
             onKeyDown={(event) => { if (event.key === 'Enter') sendText(); }}
-            placeholder="Type text into the focused field on Android"
+            placeholder="{t('pages.device.screen.inputPlaceholder')}"
           />
           <Button onClick={sendText} disabled={!textInput}><Send className="mr-2 h-4 w-4" />Send</Button>
         </div>

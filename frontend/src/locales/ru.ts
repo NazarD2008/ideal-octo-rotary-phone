@@ -156,6 +156,13 @@ export const ru = {
     logs: {
       title: 'Журнал',
     },
+    notFound: {
+      code: '404',
+      title: 'Страница не найдена',
+      description: 'Запрошенная страница не найдена.',
+      backToDashboard: 'Вернуться на панель',
+    },
+
   },
   settings: {
     profile: {
