@@ -147,17 +147,6 @@ export default {
       viewLog: 'Показать лог',
     }
   },
-  users: {
-    errors: {
-      fetchFailed: 'Не удалось загрузить список пользователей',
-      createFailed: 'Не удалось создать пользователя',
-      updateFailed: 'Не удалось обновить данные пользователя',
-      resetPasswordFailed: 'Не удалось сбросить пароль',
-      updatePermissionsFailed: 'Не удалось обновить права',
-      deleteFailed: 'Не удалось удалить пользователя',
-    },
-    confirm: { delete: 'Вы уверены, что хотите удалить этого пользователя?' }
-  },
 
   settings: {
     profile: { title: 'Профиль', username: 'Имя пользователя', email: 'Email', saveProfile: 'Сохранить профиль' },
