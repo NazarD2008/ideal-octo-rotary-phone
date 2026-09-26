@@ -2,23 +2,24 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 function Button({ className, variant = 'default', size = 'default', ...props }: React.ComponentProps<'button'> & {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'
-  size?: 'default' | 'sm' | 'lg' | 'icon'
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link' | 'success'
+  size?: 'default' | 'sm' | 'lg' | 'icon' | 'xl'
 }) {
-  // Map variants to the simpler theme classes defined in src/index.css
   const variantMap: Record<string, string> = {
     default: 'btn btn--primary',
     destructive: 'btn btn--danger',
-    outline: 'btn btn--ghost',
+    outline: 'btn btn--secondary',
     secondary: 'btn btn--secondary',
     ghost: 'btn btn--ghost',
     link: 'btn btn--ghost',
+    success: 'btn btn--success',
   }
 
   const sizeMap: Record<string, string> = {
     default: '',
     sm: 'btn--sm',
     lg: 'btn--lg',
+    xl: 'btn--xl',
     icon: 'icon-btn',
   }
 
@@ -30,7 +31,6 @@ function Button({ className, variant = 'default', size = 'default', ...props }: 
       className={cn(
         variantClass,
         sizeClass,
-        // ensure we still allow additional utility classes passed by callers
         className
       )}
       {...props}

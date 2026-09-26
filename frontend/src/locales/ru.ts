@@ -1,6 +1,7 @@
 export default {
   common: {
     loading: 'Загрузка...',
+    userFallback: 'Пользователь',
     saving: 'Сохранение...',
     deleting: 'Удаление...',
     uploading: 'Загрузка...',
@@ -88,6 +89,9 @@ export default {
       description: 'Создавайте и управляйте учетными записями',
       addUser: 'Добавить пользователя',
       searchPlaceholder: 'Поиск по имени или email',
+      noUsers: 'Пользователи не найдены',
+      tryDifferentSearch: 'Попробуйте другой запрос',
+      createFirstUser: 'Создайте первого пользователя',
     },
     builder: {
       title: 'Сборка APK',
@@ -123,7 +127,9 @@ export default {
       editUser: { title: 'Редактировать пользователя', description: 'Обновите информацию о пользователе' },
       resetPassword: { title: 'Сброс пароля', description: 'Установите новый пароль для пользователя', newPassword: 'Новый пароль', enterNewPassword: 'Введите новый пароль' },
       permissions: { title: 'Права доступа', description: 'Управляйте правами пользователя' },
-    }
+    },
+    badges: { you: 'Вы', primary: 'Основной' },
+    roles: { admin: 'Администратор', user: 'Пользователь' },
   },
 
   builder: {
@@ -139,5 +145,16 @@ export default {
 
   logs: {
     title: 'Журнал',
+  },
+  users: {
+    errors: {
+      fetchFailed: 'Не удалось загрузить список пользователей',
+      createFailed: 'Не удалось создать пользователя',
+      updateFailed: 'Не удалось обновить данные пользователя',
+      resetPasswordFailed: 'Не удалось сбросить пароль',
+      updatePermissionsFailed: 'Не удалось обновить права',
+      deleteFailed: 'Не удалось удалить пользователя',
+    },
+    confirm: { delete: 'Вы уверены, что хотите удалить этого пользователя?' }
   }
 };

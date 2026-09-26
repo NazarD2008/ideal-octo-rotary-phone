@@ -37,7 +37,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen overflow-hidden flex">
-      <aside className="hidden lg:flex lg:shrink-0">
+      <aside className="hidden">
         <Sidebar />
       </aside>
 

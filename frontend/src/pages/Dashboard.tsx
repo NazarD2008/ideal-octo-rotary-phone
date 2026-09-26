@@ -27,99 +27,125 @@ export default function DashboardPage() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    const name = user?.username || 'Пользователь';
+    const name = user?.username || t('common.userFallback') || 'Пользователь';
     if (hour < 12) return t('pages.dashboard.greeting.morning', { name });
     if (hour < 18) return t('pages.dashboard.greeting.afternoon', { name });
     return t('pages.dashboard.greeting.evening', { name });
   };
 
   const statCards = [
-    { title: t('dashboard.stats.totalDevices'), value: stats?.totalClients || 0, icon: Users, color: 'text-primary' },
-    { title: t('dashboard.stats.online'), value: stats?.onlineClients || 0, icon: Wifi, color: 'text-success' },
-    { title: t('dashboard.stats.offline'), value: stats?.offlineClients || 0, icon: WifiOff, color: 'text-warning' },
-    { title: t('dashboard.stats.totalUsers'), value: stats?.totalUsers || 0, icon: UserCog, color: 'text-blue-400' },
-    { title: t('dashboard.stats.admins'), value: stats?.totalAdmins || 0, icon: ShieldCheck, color: 'text-orange-400' },
-    { title: t('dashboard.stats.uptime'), value: stats ? formatTime(stats.uptime) : '0m', icon: Clock, color: 'text-primary' },
+    { title: t('dashboard.stats.totalDevices'), value: stats?.totalClients || 0, icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+    { title: t('dashboard.stats.online'), value: stats?.onlineClients || 0, icon: Wifi, color: 'text-success', bg: 'bg-success/10' },
+    { title: t('dashboard.stats.offline'), value: stats?.offlineClients || 0, icon: WifiOff, color: 'text-warning', bg: 'bg-warning/10' },
+    { title: t('dashboard.stats.totalUsers'), value: stats?.totalUsers || 0, icon: UserCog, color: 'text-info', bg: 'bg-info/10' },
+    { title: t('dashboard.stats.admins'), value: stats?.totalAdmins || 0, icon: ShieldCheck, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+    { title: t('dashboard.stats.uptime'), value: stats ? formatTime(stats.uptime) : '0m', icon: Clock, color: 'text-primary', bg: 'bg-primary/10' },
   ];
 
   const quickActions = getQuickActions(hasPermission);
 
   return (
     <div className="space-y-8">
-      {/* Hero */}
-      <section className="hero py-8">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <h1 className="text-3xl md:text-4xl font-extrabold gradient-gold mb-2">{getGreeting()}</h1>
-          <p className="text-sm text-muted-foreground">{t('pages.dashboard.welcome')}</p>
+      {/* Hero Section */}
+      <section className="mb-4">
+        <div className="max-w-4xl">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-transparent">
+            {getGreeting()}
+          </h1>
+          <p className="text-muted-foreground text-lg">{t('pages.dashboard.welcome')}</p>
         </div>
       </section>
 
-      {/* Metrics */}
+      {/* Action toolbar */}
+      <section className="mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="default" size="sm" onClick={() => navigate('/devices')} className="gap-2">
+            <Smartphone className="h-4 w-4" /> Устройства
+          </Button>
+          <Button variant="default" size="sm" onClick={() => navigate('/builder')} className="gap-2">
+            <Zap className="h-4 w-4" /> Сборка APK
+          </Button>
+          <Button variant="default" size="sm" onClick={() => navigate('/logs')} className="gap-2">
+            <ArrowRight className="h-4 w-4" /> Просмотреть журнал
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="gap-2">
+            <UserCog className="h-4 w-4" /> Настройки
+          </Button>
+          <Button variant="ghost" size="sm" onClick={fetchDashboard} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Обновить
+          </Button>
+        </div>
+      </section>
+
+      {/* Compact Stats Grid */}
       <section>
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {statCards.map((s, idx) => (
-              <article key={idx} className="metric-card p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{s.title}</p>
-                    <p className="text-2xl font-bold mt-1">{s.value}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-lg flex items-center justify-center bg-card-foreground/5">
+        <div className="metrics-grid">
+          {statCards.map((s, idx) => (
+            <Card key={idx} className="stat-card">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${s.bg}`}>
                     <s.icon className={`h-6 w-6 ${s.color}`} />
                   </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{s.title}</p>
+                    <p className="text-2xl font-bold mt-1">{s.value}</p>
+                  </div>
                 </div>
-              </article>
-            ))}
-          </div>
-
-          {/* Quick actions */}
-          <div className="mt-6 bg-transparent p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              {quickActions.slice(0,4).map((a) => (
-                <Button key={a.to} variant="default" size="sm" onClick={() => navigate(a.to)} className="btn--sm">
-                  <a.icon className="h-4 w-4 mr-2" />
-                  <span className="hidden sm:inline">{a.label}</span>
-                </Button>
-              ))}
-              <Button onClick={fetchDashboard} variant="ghost" size="sm" className="btn--sm">
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                {t('pages.dashboard.refreshData')}
-              </Button>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
-      {/* Main area */}
+      {/* Main Content Grid */}
       <section>
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <h3 className="text-lg font-semibold mb-2">{t('dashboard.systemStatus')}</h3>
-                  <p className="text-sm text-muted-foreground">{t('dashboard.runningNormal')}</p>
-                </CardContent>
-              </Card>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Status Card */}
+          <div className="lg:col-span-2">
+            <Card className="h-full">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="h-12 w-12 rounded-lg bg-success/10 flex items-center justify-center">
+                    <Activity className="h-6 w-6 text-success" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold">Статус системы</h3>
+                    <p className="text-sm text-muted-foreground">Все компоненты работают нормально</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-border">
+                  <Badge variant="success">Все системы в норме</Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-            <div>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-2">{t('dashboard.quickActions')}</p>
-                  <div className="flex flex-col gap-2">
+          {/* Quick Links compact */}
+          <div>
+            <Card className="h-full">
+              <CardContent className="p-4">
+                <p className="text-xs font-semibold uppercase text-muted-foreground mb-4 tracking-wider">Быстрые ссылки</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {quickActions.map((act) => (
-                      <Button key={act.to} variant="outline" size="sm" onClick={() => navigate(act.to)} className="justify-start">
-                        <act.icon className="h-3.5 w-3.5 mr-2" /> {act.label}
+                      <Button key={act.to} variant="outline" size="sm" onClick={() => navigate(act.to)} className="gap-2">
+                        <act.icon className="h-4 w-4" /> <span>{act.label}</span>
                       </Button>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
+      </section>
+
+      {/* Footer Info */}
+      <section className="text-center pt-8 border-t border-border">
+        <p className="text-sm text-muted-foreground">
+          Последнее обновление: {new Date().toLocaleString()} • Статус: <Badge variant="success">Активно</Badge>
+        </p>
       </section>
     </div>
   );
