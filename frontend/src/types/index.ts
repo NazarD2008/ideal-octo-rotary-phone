@@ -193,6 +193,7 @@ export interface UserItem {
   role: UserRole;
   permissions: Permission[];
   isDefault: number;
+  bindingActive?: number;
   createdAt: string;
   lastLogin: string | null;
 }
