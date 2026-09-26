@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './sidebar';
-import Header from './header';
+import Header from './header'; // refactored header (index.tsx in header/)
 import MobileNav from './mobile-nav';
 import { useDevicesStore } from '@/store/devices';
 import { initAdminSocket, disconnectAdminSocket } from '@/services/socket';
