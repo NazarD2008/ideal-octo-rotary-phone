@@ -57,14 +57,10 @@ export default function AppLayout() {
 
 
       </div>
-
       <MobileDrawer
         open={mobileOpen}
         onClose={() => setMobileOpen(false)}
         items={navItems}
-        user={user}
-        onLogout={async () => { await logout(); setMobileOpen(false); navigate('/login'); }}
-        ariaLabel={"Навигация"}
       />
     </div>
   );
