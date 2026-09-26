@@ -25,11 +25,11 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [fetchDashboard]);
 
-  const getGreeting = () => {
+  const getGreeting = (name?: string) => {
     const hour = new Date().getHours();
-    if (hour < 12) return t('pages.dashboard.greeting.morning');
-    if (hour < 18) return t('pages.dashboard.greeting.afternoon');
-    return t('pages.dashboard.greeting.evening');
+    if (hour < 12) return t('pages.dashboard.greeting.morning', { name: name || (user?.username || 'Пользователь') });
+    if (hour < 18) return t('pages.dashboard.greeting.afternoon', { name: name || (user?.username || 'Пользователь') });
+    return t('pages.dashboard.greeting.evening', { name: name || (user?.username || 'Пользователь') });
   };
 
   const statCards = [
@@ -55,7 +55,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight gradient-gold">
-            {getGreeting()}, <span className="text-primary">{user?.username || 'Пользователь'}</span>
+            {getGreeting()} 
           </h1>
           <p className="text-muted-foreground mt-1">
             {t('pages.dashboard.welcome')}
