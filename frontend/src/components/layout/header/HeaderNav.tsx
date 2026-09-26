@@ -19,7 +19,7 @@ export default function HeaderNav() {
             end={item.end}
             className={({ isActive }) => `inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition ${isActive ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-surface/40 hover:text-foreground'}`}>
             <item.icon className="h-4 w-4" />
-            <span className="hidden md:inline">{item.label}</span>
+            <span className="hidden md:inline text-sm">{item.label}</span>
           </NavLink>
         ))}
       </div>

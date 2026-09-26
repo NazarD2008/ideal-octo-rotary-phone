@@ -247,8 +247,8 @@ export default function UsersPage() {
         {filteredUsers.length === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center py-16 text-muted-foreground">
             <UsersIcon className="h-10 w-10 mb-3 opacity-40" />
-            <p className="text-sm font-medium">{t('pages.users.noUsers')}</p>
-            <p className="text-xs mt-1">
+            <p className="text-base font-medium">{t('pages.users.noUsers')}</p>
+            <p className="text-sm mt-1">
               {search ? t('pages.users.tryDifferentSearch') : t('pages.users.createFirstUser')}
             </p>
           </div>
@@ -289,17 +289,17 @@ export default function UsersPage() {
 
                   <div className="flex items-center gap-1 shrink-0">
                     {user.isDefault !== 1 && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openEditDialog(user)}>
+                      <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => openEditDialog(user)}>
                         {t('common.edit')}
                       </Button>
                     )}
                     {user.role !== 'admin' && user.isDefault !== 1 && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openPermissionsDialog(user)}>
+                      <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => openPermissionsDialog(user)}>
                         {t('pages.users.buttons.permissions')}
                       </Button>
                     )}
                     {user.isDefault !== 1 && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openResetPasswordDialog(user)}>
+                      <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => openResetPasswordDialog(user)}>
                         {t('common.reset')}
                       </Button>
                     )}

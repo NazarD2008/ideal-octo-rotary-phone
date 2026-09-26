@@ -158,6 +158,29 @@ export const ru = {
     },
   },
 
+  // Builder translations (used by Builder page and some legacy builder.* keys)
+  builder: {
+    steps: {
+      checking: 'Проверка',
+      decompiling: 'Декомпиляция',
+      patching: 'Применение патчей',
+      building: 'Сборка',
+      signing: 'Подпись',
+    },
+    configuration: 'Конфигурация сборки',
+    serverUrl: 'Адрес сервера',
+    serverHelp: 'Адрес, по которому запущен ваш сервер Лиума',
+    homePageUrl: 'Домашняя страница',
+    appName: 'Название приложения',
+    packageName: 'Пакет приложения',
+    version: 'Версия',
+    appIcon: 'Иконка приложения',
+    removeIcon: 'Удалить иконку',
+    buildApk: 'Собрать APK',
+    downloadApk: 'Скачать APK',
+    progressTitle: 'Прогресс сборки',
+  },
+
   dashboard: {
     stats: {
       totalDevices: 'Всего устройств',

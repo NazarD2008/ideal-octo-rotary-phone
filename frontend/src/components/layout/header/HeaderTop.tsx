@@ -21,7 +21,7 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen?: () 
           </div>
           <div className="hidden sm:flex flex-col" style={{minWidth: 180}}>
             <span className="text-base font-semibold text-foreground">{t('app.title') || 'Консоль Лиума'}</span>
-            {/* subtitle removed from header to match original layout */}
+            <span className="text-xs text-muted-foreground">{t('app.subtitle') || 'Панель управления'}</span>
           </div>
         </div>
       </div>
