@@ -15,8 +15,13 @@ function flattenObject(obj: Record<string, any>, prefix = ''): Record<string, st
 const flatTranslations = flattenObject(ru as Record<string, any>);
 
 function escapeRegExp(s: string): string {
-  // Escape characters with special meaning in regex
-  return s.replace(/[.*+?^${}()|[\]\]/g, '\$&');
+  // Avoid regex literals by escaping characters via a Set lookup
+  const specials = new Set(['.', '*', '+', '?', '^', '$', '{', '}', '(', ')', '|', '[', ']', '\', '/']);
+  let out = '';
+  for (const ch of s) {
+    out += specials.has(ch) ? '\' + ch : ch;
+  }
+  return out;
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {
