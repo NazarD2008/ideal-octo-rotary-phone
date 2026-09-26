@@ -19,11 +19,15 @@ export function t(key: string, params?: Record<string, string | number>): string
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       const token = `{${k}}`;
-      // Use split/join to avoid any regex literal parsing/escaping issues
+      // simple, safe replacement avoiding regex parsing
       translation = translation.split(token).join(String(v));
     }
   }
   return translation;
+}
+
+export function useTranslation() {
+  return { t };
 }
 
 export function setLocale(_locale: string) {
@@ -41,6 +45,18 @@ export function isSupported(locale: string) {
 export function getSupportedLocales(): string[] {
   return ['ru'];
 }
+
+// Named exports for convenience (used by src/locales/index.ts)
+export const common = (ru as any).common;
+export const nav = (ru as any).nav;
+export const pages = (ru as any).pages;
+export const dashboard = (ru as any).dashboard;
+export const settings = (ru as any).settings;
+export const users = (ru as any).users;
+export const devices = (ru as any).devices;
+export const builder = (ru as any).builder;
+
+export default ru;
 
 export type LocaleKey = keyof typeof ru;
 export type TranslationValue = string | { [key: string]: TranslationValue };
