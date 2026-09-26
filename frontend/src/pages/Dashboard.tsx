@@ -52,16 +52,7 @@ export default function DashboardPage() {
             {t('pages.dashboard.welcome') || 'Добро пожаловать в консоль — здесь собрана основная информация о состоянии системы.'}
           </p>
 
-          {/* Quick actions */}
-          <div className="mt-6 flex justify-center">
-            <div className="flex flex-wrap gap-3">
-              {quickActions.map((act) => (
-                <Button key={act.to} variant="outline" size="sm" onClick={() => navigate(act.to)} className="gap-2">
-                  <act.icon className="h-4 w-4" /> <span>{act.label}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
+          {/* Quick actions are available in the top navigation; removed duplicate buttons here. */}
         </section>
 
         {/* Stats Grid */}
