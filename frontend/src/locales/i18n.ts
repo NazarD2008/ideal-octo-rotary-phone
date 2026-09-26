@@ -104,9 +104,6 @@ export function getSupportedLocales(): string[] {
  * 获取所有支持的语言列表
  * @returns 支持的语言代码数组
  */
-export function getSupportedLocales(): string[] {
-  return ['zh-CN'];
-}
 
 /**
  * 快捷翻译函数 - 通用术语
