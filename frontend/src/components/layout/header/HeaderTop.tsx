@@ -11,7 +11,7 @@ export default function HeaderTop({ onMobileMenuOpen }: { onMobileMenuOpen: () =
   const navigate = useNavigate();
 
   return (
-    <div className="header-inner max-w-6xl mx-auto flex items-center justify-between h-16 px-4" role="banner">
+    <div className="header-inner w-full mx-auto flex items-center justify-between h-16 px-4" role="banner">
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/') }>
           <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white font-bold shadow">

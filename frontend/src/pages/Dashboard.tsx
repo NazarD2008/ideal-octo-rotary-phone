@@ -48,7 +48,7 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Hero Section */}
       <section className="mb-4">
-        <div className="max-w-4xl mx-auto text-center">
+        <div className="w-full max-w-6xl mx-auto text-center px-4 md:px-6 lg:px-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-transparent">
             {getGreeting()}
           </h1>
