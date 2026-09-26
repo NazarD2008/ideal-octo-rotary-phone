@@ -1,0 +1,244 @@
+--- BEGIN FILE: src/pages/Login.tsx ---
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/auth';
+import { useThemeStore } from '@/store/theme';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Eye, EyeOff, Shield, Sun, Moon, Monitor, Lock, User, Key } from 'lucide-react';
+import logoImg from '/logo.png';
+import { t } from '@/locales/i18n';
+
+export default function LoginPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [bindingKey, setBindingKey] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showBindingKey, setShowBindingKey] = useState(false);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  const { login, isLoading, error, clearError } = useAuthStore();
+  const { resolvedTheme, setTheme, theme } = useThemeStore();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    clearError();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+    setIsLockedOut(false);
+    const success = await login(username, password, bindingKey);
+    if (success) {
+      navigate('/');
+    } else {
+      const storeError = useAuthStore.getState().error;
+      if (storeError?.includes('Too many') || storeError?.includes('locked') || storeError?.includes('429')) {
+        setIsLockedOut(true);
+      }
+    }
+  };
+
+  const cycleTheme = () => {
+    const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system';
+    setTheme(next);
+  };
+
+  const ThemeIcon = resolvedTheme === 'dark' ? Moon : Sun;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      {/* Animated Gradient Background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-pulse delay-500" />
+      </div>
+
+      {/* Theme Toggle Button */}
+      <button
+        onClick={cycleTheme}
+        className="absolute top-6 right-6 z-10 inline-flex items-center justify-center h-10 w-10 rounded-lg border border-border bg-card text-foreground hover:bg-surface hover:border-primary transition-all duration-300 shadow-md"
+        aria-label={t('common.toggleTheme')}
+        title={theme === 'system' ? t('theme.system') : theme === 'light' ? t('theme.light') : t('theme.dark')}
+      >
+        {theme === 'system' ? <Monitor className="h-5 w-5" /> : <ThemeIcon className="h-5 w-5" />}
+      </button>
+
+      {/* Main Card */}
+      <Card className="w-full max-w-[420px] shadow-xl border relative z-10 animate-fadeIn">
+        {/* Header with Logo */}
+        <CardHeader className="text-center space-y-6 pb-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-2xl blur-lg"></div>
+              <img
+                src={logoImg}
+                alt={t('app.logoAlt')}
+                className="w-20 h-20 object-contain relative drop-shadow-lg"
+              />
+            </div>
+            <div>
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary-light to-primary bg-clip-text text-transparent">
+                {t('app.title')}
+              </CardTitle>
+              <CardDescription className="mt-2 text-muted-foreground text-sm">
+                {t('auth.login.subtitle')}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
+          <CardContent className="space-y-5">
+            {/* Error Message */}
+            {error && (
+              <div className={`p-4 rounded-lg border text-sm flex items-start gap-3 animate-slideInLeft ${
+                isLockedOut
+                  ? 'bg-warning/10 border-warning/30 text-warning'
+                  : 'bg-error/10 border-error/30 text-error'
+              }`}>
+                <Shield className="h-5 w-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">{error}</p>
+                  {isLockedOut && (
+                    <p className="text-xs opacity-75 mt-1">Пожалуйста, попробуйте позже</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Username Field */}
+            <div className="space-y-2.5">
+              <Label htmlFor="username" className="text-foreground font-medium text-sm">
+                {t('auth.login.username')}
+              </Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder={t('auth.login.usernamePlaceholder')}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onFocus={() => setFocusedField('username')}
+                  onBlur={() => setFocusedField(null)}
+                  required
+                  autoFocus
+                  disabled={isLockedOut}
+                  className={`pl-10 transition-all ${focusedField === 'username' ? 'border-primary ring-2 ring-primary/10' : ''}`}
+                />
+              </div>
+            </div>
+
+            {/* Binding Key Field */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="bindingKey" className="text-foreground font-medium text-sm">
+                  Ключ привязки
+                </Label>
+                <span className="text-xs text-muted-foreground">Опционально</span>
+              </div>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="bindingKey"
+                  type={showBindingKey ? 'text' : 'password'}
+                  placeholder="Введите ключ привязки"
+                  value={bindingKey}
+                  onChange={(e) => setBindingKey(e.target.value)}
+                  onFocus={() => setFocusedField('bindingKey')}
+                  onBlur={() => setFocusedField(null)}
+                  disabled={isLockedOut}
+                  className={`pl-10 pr-10 transition-all ${focusedField === 'bindingKey' ? 'border-primary ring-2 ring-primary/10' : ''}`}
+                />
+                {bindingKey && (
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowBindingKey(!showBindingKey)}
+                  >
+                    {showBindingKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Если ваша учётная запись привязана к устройству, введите ключ привязки при первом входе
+              </p>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-2.5">
+              <Label htmlFor="password" className="text-foreground font-medium text-sm">
+                {t('auth.login.password')}
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={t('auth.login.passwordPlaceholder')}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+                  required
+                  disabled={isLockedOut}
+                  className={`pl-10 pr-10 transition-all ${focusedField === 'password' ? 'border-primary ring-2 ring-primary/10' : ''}`}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+          </CardContent>
+
+          {/* Footer */}
+          <CardFooter className="flex flex-col gap-3">
+            <Button
+              type="submit"
+              className="w-full btn btn--primary"
+              disabled={isLoading || isLockedOut}
+            >
+              {isLoading ? (
+                <>
+                  <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  {t('auth.login.signingIn') || t('auth.login.signing') || 'Вход...'}
+                </>
+              ) : isLockedOut ? (
+                <>
+                  <Shield className="h-4 w-4" />
+                  {t('auth.login.lockedOut')}
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  {t('auth.login.signIn') || 'Войти'}
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Защищённый доступ • Все данные зашифрованы
+            </p>
+          </CardFooter>
+        </form>
+      </Card>
+
+      {/* Decorative Elements */}
+      <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-primary/5 to-transparent pointer-events-none -z-10" />
+    </div>
+  );
+}
+
+--- END FILE: src/pages/Login.tsx ---
+
+(omitted rest for brevity)
