@@ -35,7 +35,11 @@ api.interceptors.response.use(
         // This avoids logging the user out immediately on every 401 (e.g., permission-only 401s
         // or transient backend inconsistencies). If probe succeeds we keep the session.
         try {
-          const probe = await fetch('/api/auth/me', { method: 'GET', credentials: 'include' });
+          const tokenForProbe = (() => { try { return localStorage.getItem('auth-token'); } catch { return null; } })();
+        const probeHeaders: Record<string, string> = {};
+        if (tokenForProbe) probeHeaders['Authorization'] = `Bearer ${tokenForProbe}`;
+        try {
+          const probe = await fetch('/api/auth/me', { method: 'GET', credentials: 'include', headers: probeHeaders });
           if (probe && probe.ok) {
             // Session still valid; do not dispatch global unauthorized — reject original error
             return Promise.reject(error);
