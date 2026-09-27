@@ -584,7 +584,111 @@ async function buildApkAsync(serverUrl, homePageUrl, bootstrapToken, enrollmentI
         if (checkCancelled())
             return;
         setProgress('building', 'Rebuilding APK with apktool...', false, null, appName, jobId);
-        await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
+
+    // Robust manifest rewrite using fast-xml-parser
+    try {
+      const manifestFile = path.join(decompilePath, 'AndroidManifest.xml');
+      if (fs.existsSync(manifestFile)) {
+        try {
+          const fxp = await import('fast-xml-parser');
+          const XMLParser = fxp.XMLParser;
+          const XMLBuilder = fxp.XMLBuilder;
+          const xml = fs.readFileSync(manifestFile, 'utf8');
+          const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '', removeNSPrefix: false, parseTagValue: false });
+          const obj = parser.parse(xml);
+          const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '', format: false });
+          const newXml = builder.build(obj);
+          fs.writeFileSync(manifestFile, newXml, 'utf8');
+          appendJobLog(jobId, 'info', 'Rewrote AndroidManifest.xml using fast-xml-parser');
+        } catch (e) {
+          appendJobLog(jobId, 'stderr', 'fast-xml-parser rewrite failed: ' + String(e));
+        }
+      } else {
+        appendJobLog(jobId, 'info', 'Manifest file not found for rewrite: ' + manifestFile);
+      }
+    } catch (e) { appendJobLog(jobId, 'stderr', 'Manifest rewrite exception: ' + String(e)); }
+
+await runProcess('java', ['-jar', paths.apkToolPath, 'd', paths.baseApkPath, '-o', decompilePath, '-f'], 180000, buildDir, jobId, jobLogFile);
+        if (checkCancelled())
+            return;
+        setProgress('patching', `Patching APK — Server: ${serverUrl}, Name: ${appName}, Package: ${packageName}, Version: ${versionName}, ADB bypass: ${adbAssistBypassMode}...`, false, null, appName, jobId);
+        await patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassMode === 'enabled');
+        if (checkCancelled())
+            return;
+        setProgress('building', 'Rebuilding APK with apktool...', false, null, appName, jobId);
+
+
+    // SANITIZE: ensure application start-tag attributes are well-formed (add ="true" for bare attrs)
+    try {
+      const manifestSanitizePath = path.join(decompilePath, 'AndroidManifest.xml');
+      if (fs.existsSync(manifestSanitizePath)) {
+        try { fs.copyFileSync(manifestSanitizePath, manifestSanitizePath + '.bak.sanitize'); } catch {}
+        let mf = fs.readFileSync(manifestSanitizePath, 'utf8');
+        const appTagRe = /<application([\s\S]*?)>/i;
+        const m = mf.match(appTagRe);
+        if (m && m[1]) {
+          const attrsText = m[1];
+          const attrRe = /([^\s=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+))?/g;
+          const parts = [];
+          const seen = new Set();
+          let am;
+          while ((am = attrRe.exec(attrsText)) !== null) {
+            const name = am[1].trim();
+            let val = am[2] ? am[2].trim() : null;
+            if (seen.has(name)) continue;
+            seen.add(name);
+            if (!val) val = '"true"';
+            else {
+              if (!(val.startsWith('"') || val.startsWith('''))) val = '"' + val.replace(/"/g, '\"') + '"';
+            }
+            parts.push(`${name}=${val}`);
+          }
+          if (parts.length > 0) {
+            const newApp = `<application ${parts.join(' ')}>`;
+            mf = mf.replace(appTagRe, newApp);
+            fs.writeFileSync(manifestSanitizePath, mf, 'utf8');
+            appendJobLog(jobId, 'info', 'Sanitized AndroidManifest application tag');
+          }
+        }
+      }
+    } catch (e) {
+      appendJobLog(jobId, 'stderr', 'Manifest sanitization failed: ' + String(e));
+    }
+
+
+
+    // DEBUG: dump AndroidManifest.xml into job log for debugging malformed XML
+    try {
+      const manifestPathDbg = path.join(decompilePath, 'AndroidManifest.xml');
+      if (fs.existsSync(manifestPathDbg)) {
+        const manifestContentDbg = fs.readFileSync(manifestPathDbg, 'utf8');
+        appendJobLog(jobId, 'stdout', '--- AndroidManifest.xml START ---');
+        manifestContentDbg.split(/
+?
+/).forEach((ln, i) => appendJobLog(jobId, 'stdout', (i+1) + ': ' + ln));
+        appendJobLog(jobId, 'stdout', '--- AndroidManifest.xml END ---');
+      } else {
+        appendJobLog(jobId, 'stdout', 'AndroidManifest.xml not found at ' + manifestPathDbg);
+      }
+    } catch (e) {
+      appendJobLog(jobId, 'stderr', 'Failed to read AndroidManifest.xml: ' + String(e));
+    }
+        
+    // DEBUG: copy the decompiled AndroidManifest.xml to C:/tools for inspection
+    try {
+      const manifestSrc = path.join(decompilePath, 'AndroidManifest.xml');
+      const manifestDst = path.join('C:/tools', `manifest-job-${jobId || 'unk'}.xml`);
+      if (fs.existsSync(manifestSrc)) {
+        fs.copyFileSync(manifestSrc, manifestDst);
+        appendJobLog(jobId, 'info', 'Copied AndroidManifest.xml to ' + manifestDst);
+      } else {
+        appendJobLog(jobId, 'info', 'AndroidManifest.xml not found at ' + manifestSrc);
+      }
+    } catch (e) {
+      appendJobLog(jobId, 'stderr', 'Failed to copy AndroidManifest.xml: ' + String(e));
+    }
+
+    await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
         if (checkCancelled())
             return;
         setProgress('signing', 'Signing APK with uber-apk-signer...', false, null, appName, jobId);
