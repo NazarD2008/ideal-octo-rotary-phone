@@ -26,11 +26,24 @@ api.interceptors.request.use((config) => {
 const AUTH_WHITELIST = ['/api/auth/login'];
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
       const url: string = error.config?.url || '';
       const isAuthEndpoint = AUTH_WHITELIST.some(ep => url === ep || url.endsWith(ep));
       if (!isAuthEndpoint) {
+        // Probe auth/me with a credentials-including fetch to confirm session state.
+        // This avoids logging the user out immediately on every 401 (e.g., permission-only 401s
+        // or transient backend inconsistencies). If probe succeeds we keep the session.
+        try {
+          const probe = await fetch('/api/auth/me', { method: 'GET', credentials: 'include' });
+          if (probe && probe.ok) {
+            // Session still valid; do not dispatch global unauthorized — reject original error
+            return Promise.reject(error);
+          }
+        } catch (e) {
+          // probe failed — fall through and clear session
+        }
+
         localStorage.removeItem('auth-user');
         localStorage.removeItem('auth-token');
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
