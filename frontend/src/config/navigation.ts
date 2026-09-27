@@ -3,6 +3,7 @@ import {
   Info, MessageSquare, Phone, MapPin, Camera, Mic,
   FolderOpen, Wifi, Clipboard, Bell, Shield, Download, Server, Monitor, Keyboard, MonitorSmartphone, Terminal, Globe,
 } from 'lucide-react';
+import { t as i18nT } from '@/locales/i18n';
 import type { Permission } from '@/types';
 
 export interface NavItem {
@@ -51,6 +52,16 @@ const translations = {
 };
 
 function t(key: string): string {
+  // Prefer main nav i18n keys when available
+  const navMap: Record<string, string> = {
+    Dashboard: i18nT('nav.dashboard'),
+    Devices: i18nT('nav.devices'),
+    Users: i18nT('nav.users'),
+    Builder: i18nT('nav.builder'),
+    Settings: i18nT('nav.settings'),
+    Logs: i18nT('nav.logs'),
+  };
+  if (navMap[key]) return navMap[key];
   return translations[key as keyof typeof translations] || key;
 }
 
