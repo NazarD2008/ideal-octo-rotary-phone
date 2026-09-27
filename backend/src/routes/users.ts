@@ -27,7 +27,42 @@ export async function userRoutes(app: FastifyInstance) {
 
   app.get('/api/users', {
     preHandler: manageUsers,
-  }, async () => {
+  }, async (request) => {
+    const q = (request.query as any)?.q;
+    if (typeof q === 'string' && q.trim().length > 0) {
+      const search = `%${q.trim().toLowerCase()}%`;
+      const d = getDb();
+      const rows = d.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        permissions: users.permissions,
+        isDefault: users.isDefault,
+        bindingActive: users.bindingActive,
+        createdAt: users.createdAt,
+        lastLogin: users.lastLogin,
+      })
+        .from(users)
+        .where(sql`LOWER(${users.username}) LIKE ${search} OR LOWER(${users.email}) LIKE ${search}`)
+        .all();
+
+      return {
+        success: true,
+        data: rows.map(u => ({
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          role: u.role,
+          permissions: resolvePermissions(u.role as UserRole, u.permissions),
+          isDefault: u.isDefault,
+          bindingActive: (u as any).bindingActive || 0,
+          createdAt: u.createdAt,
+          lastLogin: u.lastLogin,
+        })),
+      };
+    }
+
     const allUsers = dbHelpers.getAllUsers();
     return {
       success: true,

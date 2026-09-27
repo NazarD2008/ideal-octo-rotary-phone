@@ -133,7 +133,8 @@ export function initDb(): DB {
       apk_data BLOB,
       file_size INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
-      completed_at TEXT
+      completed_at TEXT,
+      creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -310,7 +311,7 @@ export function initDb(): DB {
     log.warn(`sessions migration warning: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // Migrate: add owner_id column to clients if missing
+  // Migrate: add owner_id and build_id columns to clients if missing
   try {
     const tableInfoClients = sqliteDb.pragma('table_info(clients)') as Array<{ name: string }>;
     const clientCols = tableInfoClients.map(c => c.name);
@@ -324,6 +325,18 @@ export function initDb(): DB {
         } catch {}
       } catch (e) {
         log.warn(`Failed to add clients.owner_id column: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+
+    if (!clientCols.includes('build_id')) {
+      log.info('Adding build_id column to clients');
+      try {
+        sqliteDb.exec(`ALTER TABLE clients ADD COLUMN build_id INTEGER`);
+        try {
+          sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_clients_build_id ON clients(build_id)`);
+        } catch {}
+      } catch (e) {
+        log.warn(`Failed to add clients.build_id column: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
   } catch (err) {

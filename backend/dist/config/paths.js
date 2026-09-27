@@ -29,7 +29,9 @@ function resolveFactoryBuildAssets(factoryDir = path.join(ROOT_DIR, 'app', 'fact
         path.join(factoryDir, 'Liuma.apk'),
         path.join(factoryDir, 'base.apk'),
     ];
-    const baseApkPath = candidateApks.find(fs.existsSync) ?? findFirstFile(factoryDir, (name) => name.toLowerCase().endsWith('.apk')) ?? candidateApks[0];
+    const ENV_BASE_APK = process.env.BASE_APK ?? process.env.FACTORY_BASE_APK ?? null;
+    const baseApkPath = (ENV_BASE_APK && fs.existsSync(ENV_BASE_APK) ? ENV_BASE_APK : null) ??
+        candidateApks.find(fs.existsSync) ?? findFirstFile(factoryDir, (name) => name.toLowerCase().endsWith('.apk')) ?? candidateApks[0];
     const apkToolPath = (fs.existsSync(path.join(factoryDir, 'apktool.jar')) ? path.join(factoryDir, 'apktool.jar') : null) ??
         findFirstFile(factoryDir, (name) => name.toLowerCase().includes('apktool') && name.toLowerCase().endsWith('.jar')) ??
         path.join(factoryDir, 'apktool.jar');

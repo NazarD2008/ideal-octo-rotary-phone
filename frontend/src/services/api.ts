@@ -86,6 +86,8 @@ export const clientsApi = {
   revokeCredential: (id: string) => api.post(`/client/${id}/credential/revoke`),
   sendCommand: (id: string, cmd: string, params?: Record<string, unknown>) => api.post(`/cmd/${id}/${cmd}`, params || {}),
   setGps: (id: string, interval: number) => api.post(`/gps/${id}/${interval}`),
+  // Set or clear owner: { ownerId: number | null }
+  setOwner: (id: string, ownerId: number | null) => api.post(`/client/${id}/owner`, { ownerId }),
 };
 
 export const logsApi = {
@@ -113,6 +115,7 @@ export const builderApi = {
 
 export const usersApi = {
   getAll: () => api.get('/users'),
+  search: (q: string) => api.get('/users', { params: { q } }),
   create: (data: { username: string; email: string; password: string; role: string; permissions?: string[]; generateBinding?: boolean }) => api.post('/users', data),
   update: (id: number, data: { username?: string; email?: string; role?: string; permissions?: string[] }) => api.put(`/users/${id}`, data),
   updatePermissions: (id: number, permissions: string[]) => api.put(`/users/${id}/permissions`, { permissions }),

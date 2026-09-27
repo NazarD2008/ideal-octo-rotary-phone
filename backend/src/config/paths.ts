@@ -25,6 +25,10 @@ function findFirstFile(dir: string, matcher: (fileName: string) => boolean): str
   return null;
 }
 
+const ENV_APKTOOL_JAR = process.env.APKTOOL_JAR ?? process.env.APKTOOL_PATH ?? null;
+const ENV_SIGNER_JAR = process.env.SIGNER_JAR ?? process.env.UBER_APK_SIGNER_PATH ?? null;
+const ENV_BASE_APK = process.env.BASE_APK ?? process.env.FACTORY_BASE_APK ?? null;
+
 function resolveFactoryBuildAssets(factoryDir = path.join(ROOT_DIR, 'app', 'factory')) {
   const candidateApks = [
     path.join(factoryDir, 'baseApp', 'Liuma.apk'),
@@ -33,17 +37,24 @@ function resolveFactoryBuildAssets(factoryDir = path.join(ROOT_DIR, 'app', 'fact
     path.join(factoryDir, 'base.apk'),
   ];
 
-  const baseApkPath = candidateApks.find(fs.existsSync) ?? findFirstFile(factoryDir, (name) => name.toLowerCase().endsWith('.apk')) ?? candidateApks[0];
+  const baseApkPath =
+    (ENV_BASE_APK && fs.existsSync(ENV_BASE_APK) ? ENV_BASE_APK : null) ??
+    candidateApks.find(fs.existsSync) ??
+    findFirstFile(factoryDir, (name) => name.toLowerCase().endsWith('.apk')) ??
+    candidateApks[0];
 
+  // Prefer explicit env override if provided and file exists.
   const apkToolPath =
+    (ENV_APKTOOL_JAR && fs.existsSync(ENV_APKTOOL_JAR) ? ENV_APKTOOL_JAR : null) ??
     (fs.existsSync(path.join(factoryDir, 'apktool.jar')) ? path.join(factoryDir, 'apktool.jar') : null) ??
     findFirstFile(factoryDir, (name) => name.toLowerCase().includes('apktool') && name.toLowerCase().endsWith('.jar')) ??
-    path.join(factoryDir, 'apktool.jar');
+    (ENV_APKTOOL_JAR || path.join(factoryDir, 'apktool.jar'));
 
   const signerPath =
+    (ENV_SIGNER_JAR && fs.existsSync(ENV_SIGNER_JAR) ? ENV_SIGNER_JAR : null) ??
     (fs.existsSync(path.join(factoryDir, 'uber-apk-signer.jar')) ? path.join(factoryDir, 'uber-apk-signer.jar') : null) ??
     findFirstFile(factoryDir, (name) => name.toLowerCase().includes('uber-apk-signer') && name.toLowerCase().endsWith('.jar')) ??
-    path.join(factoryDir, 'uber-apk-signer.jar');
+    (ENV_SIGNER_JAR || path.join(factoryDir, 'uber-apk-signer.jar'));
 
   return { factoryDir, baseApkPath, apkToolPath, signerPath };
 }

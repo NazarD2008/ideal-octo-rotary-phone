@@ -45,6 +45,8 @@ export const clients = sqliteTable('clients', {
   gpsInterval: integer('gps_interval').default(0),
   // Optional owner: user id who 'owns' this device (nullable)
   ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
+  // Optional build reference: id of the APK build this client originated from
+  buildId: integer('build_id'),
   deviceInfo: text('device_info'),
 });
 
@@ -116,6 +118,8 @@ export const buildRecords = sqliteTable('build_records', {
   fileSize: integer('file_size').default(0),
   createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
   completedAt: text('completed_at'),
+  // Creator of the build (user id)
+  creatorId: integer('creator_id').references(() => users.id, { onDelete: 'set null' }),
 });
 
 export const settings = sqliteTable('settings', {
