@@ -407,6 +407,7 @@ export default function UsersPage() {
                   <p className="text-xs text-muted-foreground">{t('pages.users.dialogs.bindingKey.description') || 'Скопируйте ключ и передайте его пользователю безопасным способом.'}</p>
                 </div>
               )}
+            </div>
             <DialogTitle>
               {dialog?.mode === 'create' && t('pages.users.dialogs.createUser.title')}
                   {dialog?.mode === 'create' && (
