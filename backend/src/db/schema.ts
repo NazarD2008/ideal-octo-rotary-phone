@@ -43,6 +43,8 @@ export const clients = sqliteTable('clients', {
   cameraPermission: integer('camera_permission', { mode: 'boolean' }).default(false),
   currentPath: text('current_path').default(''),
   gpsInterval: integer('gps_interval').default(0),
+  // Optional owner: user id who 'owns' this device (nullable)
+  ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
   deviceInfo: text('device_info'),
 });
 

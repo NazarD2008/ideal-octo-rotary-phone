@@ -179,11 +179,18 @@ export async function deviceRoutes(app: FastifyInstance) {
 
   app.get('/api/clients', {
     preHandler: [app.auth, requirePermission('device:view')],
-  }, async () => {
+  }, async (request) => {
     const d = getDb();
-    const allClients = d.select().from(clients).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
+    const user = (request as any).user;
 
-    const formatted = allClients.map(formatClient);
+    let rows;
+    if (user?.role === 'admin') {
+      rows = d.select().from(clients).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
+    } else {
+      rows = d.select().from(clients).where(eq(clients.ownerId, user?.userId)).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
+    }
+
+    const formatted = rows.map(r => formatClientWithOwner(r));
 
     return {
       success: true,
@@ -201,11 +208,20 @@ export async function deviceRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const d = getDb();
+    const user = (request as any).user;
     const client = d.select().from(clients).where(eq(clients.id, id)).get();
     if (!client) {
       return reply.code(404).send({ success: false, error: 'Client not found' });
     }
-    return { success: true, data: formatClient(client) };
+
+    if (user?.role !== 'admin') {
+      // Non-admins can only access their own devices
+      if (!client.owner_id || client.owner_id !== user.userId) {
+        return reply.code(403).send({ success: false, error: 'Not allowed' });
+      }
+    }
+
+    return { success: true, data: formatClientWithOwner(client) };
   });
 
   app.get('/api/client/:id/webrtc-config', {
@@ -580,4 +596,18 @@ export function formatClient(client: ClientRow) {
     currentPath: client.currentPath,
     gpsInterval: client.gpsInterval,
   };
+}
+
+export function formatClientWithOwner(client: ClientRow) {
+  const base = formatClient(client as any);
+  // owner_id may be undefined in older DB rows; normalize to owner: null or { id, username }
+  if (!client.owner_id) return { ...base, owner: null };
+  try {
+    const d = getDb();
+    const owner = d.select().from(users).where(eq(users.id, client.owner_id)).get();
+    if (!owner) return { ...base, owner: null };
+    return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
+  } catch {
+    return { ...base, owner: null };
+  }
 }

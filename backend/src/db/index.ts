@@ -88,6 +88,8 @@ export function initDb(): DB {
       camera_permission INTEGER DEFAULT 0,
       current_path TEXT DEFAULT '',
       gps_interval INTEGER DEFAULT 0,
+      -- Optional owner: user id who 'owns' this device
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       device_info TEXT
     );
 
