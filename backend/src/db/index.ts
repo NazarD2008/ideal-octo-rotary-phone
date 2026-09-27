@@ -310,6 +310,26 @@ export function initDb(): DB {
     log.warn(`sessions migration warning: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  // Migrate: add owner_id column to clients if missing
+  try {
+    const tableInfoClients = sqliteDb.pragma('table_info(clients)') as Array<{ name: string }>;
+    const clientCols = tableInfoClients.map(c => c.name);
+    if (!clientCols.includes('owner_id')) {
+      log.info('Adding owner_id column to clients');
+      try {
+        // add nullable integer column; do not attempt to add FK constraint on existing table
+        sqliteDb.exec(`ALTER TABLE clients ADD COLUMN owner_id INTEGER`);
+        try {
+          sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_clients_owner_id ON clients(owner_id)`);
+        } catch {}
+      } catch (e) {
+        log.warn(`Failed to add clients.owner_id column: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+  } catch (err) {
+    log.warn(`clients migration warning: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
 dbInstance = drizzle(sqliteDb, { schema });
   log.info('Database initialized successfully (Drizzle ORM)');
   return dbInstance;
