@@ -10,8 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
-  Users as UsersIcon, Plus, Trash2, X, Check,
-  AlertCircle, ShieldCheck, Shield, RefreshCw, Lock, Search, Mail, Clock
+  Users as UsersIcon, Plus, Trash2, X, Check, AlertCircle, ShieldCheck, Shield, RefreshCw, Lock, Search, Mail, Clock, Key
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { t } from '@/locales/i18n';
@@ -55,6 +54,7 @@ export default function UsersPage() {
   };
 
   const [generateBindingKey, setGenerateBindingKey] = useState(false);
+  const [bindingActionLoading, setBindingActionLoading] = useState(false);
 
   const openCreateDialog = () => {
     setFormUsername('');
@@ -196,6 +196,44 @@ export default function UsersPage() {
     }
   };
 
+  // New: rotate a user's binding key and show it in dialog
+  const handleRotateBinding = async (user: UserItem) => {
+    if (!confirm(t('pages.users.confirm.rotateBinding') || `Rotate binding for ${user.username}?`)) return;
+    setBindingActionLoading(true);
+    setDialogError(null);
+    try {
+      const res = await usersApi.rotateBinding(user.id);
+      if (res.data.success && res.data.data?.newKey) {
+        const newKey = res.data.data.newKey as string;
+        // show the generated key to admin
+        setDialog({ mode: 'showBindingKey', initialData: { username: user.username, bindingKey: newKey } });
+        await fetchUsers();
+      } else {
+        setError(res.data.error || t('users.errors.rotateBindingFailed') || 'Failed to rotate binding');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error || t('users.errors.rotateBindingFailed') || 'Failed to rotate binding');
+    }
+    setBindingActionLoading(false);
+  };
+
+  const handleRevokeBinding = async (userId: number) => {
+    if (!confirm(t('pages.users.confirm.revokeBinding') || 'Revoke binding for this user?')) return;
+    setBindingActionLoading(true);
+    setDialogError(null);
+    try {
+      const res = await usersApi.revokeBinding(userId);
+      if (res.data.success) {
+        await fetchUsers();
+      } else {
+        setError(res.data.error || t('users.errors.revokeBindingFailed') || 'Failed to revoke binding');
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.error || t('users.errors.revokeBindingFailed') || 'Failed to revoke binding');
+    }
+    setBindingActionLoading(false);
+  };
+
   const filteredUsers = users.filter((u) => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -272,6 +310,9 @@ export default function UsersPage() {
                         {user.isDefault === 1 && (
                           <Badge variant="outline" className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.primary')}</Badge>
                         )}
+                        {user.bindingActive === 1 && (
+                          <Badge variant="outline" className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.bound') || 'Привязано'}</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         {user.role === 'admin' ? (
@@ -303,6 +344,19 @@ export default function UsersPage() {
                         {t('common.reset')}
                       </Button>
                     )}
+
+                    {/* Binding actions: rotate (generate new key) and revoke */}
+                    {user.isDefault !== 1 && (
+                      <>
+                        <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => handleRotateBinding(user)} disabled={bindingActionLoading}>
+                          <Key className="h-3.5 w-3.5" /> {t('pages.users.buttons.rotateBinding') || 'Rotate'}
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 text-sm" onClick={() => handleRevokeBinding(user.id)} disabled={bindingActionLoading}>
+                          <X className="h-3.5 w-3.5" /> {t('pages.users.buttons.revokeBinding') || 'Revoke'}
+                        </Button>
+                      </>
+                    )}
+
                     {user.isDefault !== 1 && (
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(user.id)} title={t('common.delete')}>
                         <Trash2 className="h-3.5 w-3.5" />
@@ -346,6 +400,7 @@ export default function UsersPage() {
       <Dialog open={dialog !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>
         <DialogContent className={dialog?.mode === 'permissions' ? 'max-w-lg' : dialog?.mode === 'showBindingKey' ? 'max-w-sm' : 'max-w-md'}>
           <DialogHeader>
+            <div>
               {dialog?.mode === 'showBindingKey' && (
                 <div className="flex flex-col items-start gap-2">
                   <h3 className="text-lg font-semibold">{t('pages.users.dialogs.bindingKey.title') || 'Ключ привязки'}</h3>
@@ -435,6 +490,19 @@ export default function UsersPage() {
                   </div>
                 ))}
               </div>
+            ) : dialog?.mode === 'showBindingKey' ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm">{t('pages.users.dialogs.bindingKey.generatedFor', { username: dialog?.initialData?.username || '' }) || `Ключ привязки для ${dialog?.initialData?.username || ''}`}</p>
+                  <div className="bg-muted p-3 rounded font-mono break-all text-sm flex items-center justify-between gap-2">
+                    <span className="break-all">{dialog?.initialData?.bindingKey}</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { try { navigator.clipboard.writeText(dialog?.initialData?.bindingKey || ''); } catch {} }}>{t('common.copy') || 'Копировать'}</Button>
+                      <Button size="sm" onClick={closeDialog}>{t('common.close') || 'Закрыть'}</Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -492,10 +560,10 @@ export default function UsersPage() {
                     </Button>
                   </div>
                   {formRole === 'admin' && (
-                    <p className="text-xs text-muted-foreground">管理员Пользователь会自动拥有所有权限。</p>
+                    <p className="text-xs text-muted-foreground">Администратор автоматически получает все права.</p>
                   )}
                   {formRole === 'user' && (
-                    <p className="text-xs text-muted-foreground">普通Пользователь的权限可以在创建后继续自定义。</p>
+                    <p className="text-xs text-muted-foreground">Права обычного пользователя можно настроить после создания.</p>
                   )}
                 </div>
               </div>
@@ -510,7 +578,8 @@ export default function UsersPage() {
                 dialog?.mode === 'create' ? handleCreate :
                 dialog?.mode === 'edit' ? handleEdit :
                 dialog?.mode === 'permissions' ? handleSavePermissions :
-                handleResetPassword
+                dialog?.mode === 'resetPassword' ? handleResetPassword :
+                closeDialog
               }
               disabled={dialogLoading}
               className="gap-1.5"
@@ -520,7 +589,7 @@ export default function UsersPage() {
               ) : (
                 <>
                   <Check className="h-3.5 w-3.5" />
-                  {dialog?.mode === 'create' ? t('common.create') : dialog?.mode === 'edit' ? t('common.save') : dialog?.mode === 'permissions' ? '保存权限' : t('common.reset')}
+                  {dialog?.mode === 'create' ? t('common.create') : dialog?.mode === 'edit' ? t('common.save') : dialog?.mode === 'permissions' ? t('pages.users.buttons.permissions') : dialog?.mode === 'resetPassword' ? t('common.reset') : t('common.close')}
                 </>
               )}
             </Button>
