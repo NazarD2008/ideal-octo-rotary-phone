@@ -146,6 +146,8 @@ export interface ClientDevice {
   deviceVersion: string | null; online: boolean; firstSeen: string; lastSeen: string;
   reconnectCount: number; fasonHidden: boolean; cameraPermission: boolean;
   currentPath: string; gpsInterval: number;
+  // Optional owner metadata populated by the server when available
+  owner?: { id: number; username: string; email: string } | null;
 }
 
 export interface DashboardData {

@@ -149,6 +149,9 @@ export default function DevicesPage() {
                             <div>
                               <p className="font-medium">{client.deviceModel || t('common.unknown')}</p>
                               <p className="text-xs text-muted-foreground">{client.deviceBrand || ''} {client.deviceVersion || ''}</p>
+                              {client.owner && (
+                                <p className="text-xs text-muted-foreground mt-1">{t('pages.devices.ownerLabel') || 'Владелец'}: {client.owner.username}</p>
+                              )}
                             </div>
                           </div>
                         </TableCell>
@@ -204,8 +207,11 @@ export default function DevicesPage() {
                           ) : (
                             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t('common.offline')}</Badge>
                           )}
+                          <p className="text-xs text-muted-foreground mt-0.5">{client.deviceBrand || ''} {client.deviceVersion || ''}</p>
+                          {client.owner && (
+                            <p className="text-xs text-muted-foreground mt-1">{t('pages.devices.ownerLabel') || 'Владелец'}: {client.owner.username}</p>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{client.deviceBrand || ''} {client.deviceVersion || ''}</p>
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
