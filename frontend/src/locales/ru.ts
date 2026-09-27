@@ -75,8 +75,8 @@ export const ru = {
   },
 
   app: {
-    title: 'Консоль Лиума',
-    subtitle: 'Панель управления',
+    title: 'Главное',
+    subtitle: 'VIRAL-TEAM',
     logoAlt: 'Логотип приложения',
   },
 
@@ -399,7 +399,7 @@ export const ru = {
   'pages.notFound.backToDashboard': 'Back to dashboard',
   'pages.notFound.code': 'Код',
   'pages.notFound.description': 'Описание',
-  'pages.notFound.title': 'Заголовок',
+  'pages.notFound.title': 'Страница не найдена',
   'pages.settings.description': 'Описание',
   'pages.settings.title': 'Заголовок',
   'pages.users.addUser': 'Добавить пользователя',
