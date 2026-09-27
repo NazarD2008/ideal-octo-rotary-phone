@@ -367,13 +367,6 @@ export default function LoginPage() {
                 t('auth.login.submit') || 'Войти'
               )}
             </Button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              {t('auth.login.noAccount') || 'Нет учетной записи?'} {' '}
-              <a href="/register" className="text-primary hover:text-primary/80 font-semibold transition-colors">
-                {t('auth.login.register') || 'Зарегистрируйтесь'}
-              </a>
-            </p>
           </CardFooter>
         </form>
       </Card>
