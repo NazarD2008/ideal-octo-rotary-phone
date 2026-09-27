@@ -66,10 +66,10 @@ function t(key: string): string {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: '/', icon: MonitorDot, label: t('Dashboard'), end: true, permission: 'dashboard:view' },
-  { to: '/devices', icon: Smartphone, label: t('Devices'), end: false, permission: 'device:view' },
-  { to: '/users', icon: Users, label: t('Users'), end: false, permission: 'users:manage' },
-  { to: '/builder', icon: Wrench, label: t('Builder'), end: false, permission: 'builder:access' },
+  { to: '/', icon: MonitorDot, label: t('nav.dashboard'), end: true, permission: 'dashboard:view' },
+  { to: '/devices', icon: Smartphone, label: t('nav.devices'), end: false, permission: 'device:view' },
+  { to: '/users', icon: Users, label: t('nav.users'), end: false, permission: 'users:manage' },
+  { to: '/builder', icon: Wrench, label: t('nav.builder'), end: false, permission: 'builder:access' },
   { to: '/settings', icon: Settings, label: t('Settings'), end: false, permission: 'settings:view' },
   { to: '/logs', icon: FileText, label: t('Logs'), end: false, permission: 'logs:view' },
 ];
@@ -120,7 +120,7 @@ export interface QuickAction {
 }
 
 export const QUICK_ACTIONS: QuickAction[] = [
-  { label: t('Devices'), icon: Smartphone, to: '/devices', permission: 'device:view' },
+  { label: t('nav.devices'), icon: Smartphone, to: '/devices', permission: 'device:view' },
   { label: t('Build APK'), icon: MonitorDot, to: '/builder', permission: 'builder:access' },
   { label: t('View Logs'), icon: FileText, to: '/logs', permission: 'logs:view' },
   { label: t('Settings'), icon: Settings, to: '/settings', permission: 'settings:view' },
