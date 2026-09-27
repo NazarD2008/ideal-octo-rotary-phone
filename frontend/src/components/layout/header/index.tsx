@@ -4,7 +4,7 @@ export default function Header({ onMobileMenuOpen }: { onMobileMenuOpen?: () => 
   return (
     <header className="sticky top-0 z-40 w-full bg-card/95 backdrop-blur-md border-b border-border">
       <div className="w-full">
-        <HeaderTop />
+        <HeaderTop onMobileMenuOpen={onMobileMenuOpen} />
       </div>
     </header>
   );
