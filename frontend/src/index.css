@@ -278,3 +278,26 @@ button, a, [role="button"] {
 .card .text-sm { font-size: 0.98rem !important; }
 .card .text-xs { font-size: 0.9rem !important; }
 
+
+/* --- Accessibility / Input contrast overrides --- */
+.input {
+  display: block !important;
+  width: 100% !important;
+  padding: 0.65rem 0.95rem !important;
+  border-radius: var(--radius-lg) !important;
+  border: 1.5px solid var(--color-border) !important;
+  background: var(--color-card) !important; /* ensure input bg contrasts with body */
+  color: var(--color-card-foreground) !important; /* text color */
+  font-size: 0.95rem !important;
+  outline: none !important;
+  transition: all .12s ease !important;
+}
+.input::placeholder {
+  color: var(--color-muted-foreground) !important;
+}
+.input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.08) !important;
+  background: var(--color-card) !important;
+}
+
