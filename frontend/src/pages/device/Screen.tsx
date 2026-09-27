@@ -505,7 +505,7 @@ export default function ScreenPage() {
         title={t("pages.device.screen.title")} 
         subtitle={connected ? t('pages.device.screen.subtitle.encrypted', {mode: connectionMode || t('pages.device.screen.subtitle.webRtc')}) : t('pages.device.screen.subtitle.short')}
         commandStatus={commandStatus}
-        badge={connected ? { label: '{t('pages.device.screen.liveBadge')}', variant: 'destructive', className: 'animate-pulse' } : undefined}
+        badge={connected ? { label: t('pages.device.screen.liveBadge'), variant: 'destructive', className: 'animate-pulse' } : undefined}
         actions={connected ? [{ label: 'Disconnect', icon: Unplug, onClick: handleDisconnect, variant: 'destructive' }] : []}
       />
 
@@ -574,7 +574,7 @@ export default function ScreenPage() {
                     <button onClick={handleConnect} disabled={!online} className="rounded-full bg-primary p-8 shadow-lg disabled:opacity-50">
                       {online ? <Plug className="h-16 w-16 text-primary-foreground" /> : <Monitor className="h-16 w-16 text-muted-foreground" />}
                     </button>
-                    <p className="font-semibold">{online ? '{t('pages.device.screen.connect')}' : '{t('pages.device.screen.deviceOffline')}'}</p>
+                    <p className="font-semibold">{online ? t('pages.device.screen.connect') : t('pages.device.screen.deviceOffline')}</p>
                   </>
                 )}
               </div>
@@ -613,7 +613,7 @@ export default function ScreenPage() {
             value={textInput}
             onChange={(event) => setTextInput(event.target.value)}
             onKeyDown={(event) => { if (event.key === 'Enter') sendText(); }}
-            placeholder="{t('pages.device.screen.inputPlaceholder')}"
+            placeholder={t('pages.device.screen.inputPlaceholder')}
           />
           <Button onClick={sendText} disabled={!textInput}><Send className="mr-2 h-4 w-4" />Send</Button>
         </div>

@@ -162,10 +162,10 @@ function NotFoundPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="text-center space-y-4">
-        <h1 className="text-6xl font-bold text-primary">404</h1>
-        <h2 className="text-xl font-semibold">Страница не найдена</h2>
-        <p className="text-muted-foreground">您访问的Страница не найдена。</p>
-        <Button onClick={() => window.location.href = '/'}>返回仪表板</Button>
+        <h1 className="text-6xl font-bold text-primary">{t('pages.notFound.code') || '404'}</h1>
+        <h2 className="text-xl font-semibold">{t('pages.notFound.title')}</h2>
+        <p className="text-muted-foreground">{t('pages.notFound.description')}</p>
+        <Button onClick={() => window.location.href = '/'}>{t('pages.notFound.backToDashboard')}</Button>
       </div>
     </div>
   );

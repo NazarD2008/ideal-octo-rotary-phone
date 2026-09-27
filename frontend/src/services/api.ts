@@ -27,35 +27,42 @@ const AUTH_WHITELIST = ['/api/auth/login'];
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (error?.response?.status === 401) {
       const url: string = error.config?.url || '';
       const isAuthEndpoint = AUTH_WHITELIST.some(ep => url === ep || url.endsWith(ep));
       if (!isAuthEndpoint) {
-        // Probe auth/me with a credentials-including fetch to confirm session state.
-        // This avoids logging the user out immediately on every 401 (e.g., permission-only 401s
-        // or transient backend inconsistencies). If probe succeeds we keep the session.
+        // Probe /api/auth/me with credentials (cookies) and optional token header to
+        // distinguish between a truly expired session and a transient 401 from the
+        // backend. Timeout quickly to avoid hangs.
         try {
           const tokenForProbe = (() => { try { return localStorage.getItem('auth-token'); } catch { return null; } })();
-        const probeHeaders: Record<string, string> = {};
-        if (tokenForProbe) probeHeaders['Authorization'] = `Bearer ${tokenForProbe}`;
-        try {
-          const probe = await fetch('/api/auth/me', { method: 'GET', credentials: 'include', headers: probeHeaders });
+          const probeHeaders: Record<string, string> = {};
+          if (tokenForProbe) probeHeaders['Authorization'] = `Bearer ${tokenForProbe}`;
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), 3000);
+          const probe = await fetch('/api/auth/me', { method: 'GET', credentials: 'include', headers: probeHeaders as any, signal: controller.signal });
+          clearTimeout(id);
           if (probe && probe.ok) {
-            // Session still valid; do not dispatch global unauthorized — reject original error
+            // Session still valid (cookie or token); do not force logout on single 401.
             return Promise.reject(error);
           }
         } catch (e) {
-          // probe failed — fall through and clear session
+          // probe failed or timed out — fall through to clear session
         }
 
-        localStorage.removeItem('auth-user');
-        localStorage.removeItem('auth-token');
+        try {
+          localStorage.removeItem('auth-user');
+          localStorage.removeItem('auth-token');
+        } catch (e) {
+          // ignore
+        }
         window.dispatchEvent(new CustomEvent('auth:unauthorized'));
       }
     }
     return Promise.reject(error);
   }
 );
+
 
 export default api;
 
