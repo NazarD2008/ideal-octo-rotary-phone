@@ -301,3 +301,16 @@ button, a, [role="button"] {
   background: var(--color-card) !important;
 }
 
+
+/* MUI dark-theme form control overrides */
+.MuiInputBase-root, .MuiFilledInput-root, .MuiOutlinedInput-root {
+  background: var(--color-card) !important;
+  color: var(--color-card-foreground) !important;
+}
+.MuiInputBase-input, .MuiFilledInput-input, .MuiOutlinedInput-input, .MuiInputLabel-root, .MuiFormHelperText-root {
+  color: var(--color-card-foreground) !important;
+}
+.MuiInputBase-input::placeholder, .MuiOutlinedInput-input::placeholder, .MuiFilledInput-input::placeholder {
+  color: var(--color-muted-foreground) !important;
+}
+
