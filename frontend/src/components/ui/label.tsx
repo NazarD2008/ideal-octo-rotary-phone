@@ -5,7 +5,7 @@ function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
     <label
       className={cn(
-        "text-sm font-medium text-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+        "block text-sm font-medium text-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
         className
       )}
       {...props}
