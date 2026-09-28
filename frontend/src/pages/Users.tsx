@@ -293,24 +293,31 @@ export default function UsersPage() {
         ) : (
           filteredUsers.map((user) => {
             const isYou = currentUser?.id === user.id;
+            // Support DB returning 0/1, boolean true, or string '1'/'true' — coerce to string for safe comparisons
+            const _isDefaultVal = String((user as any).isDefault);
+            const isDefault = _isDefaultVal === '1' || _isDefaultVal === 'true';
+            const _isBoundVal = String((user as any).bindingActive);
+            const isBound = _isBoundVal === '1' || _isBoundVal === 'true';
+
             return (
             <Card key={user.id} className={`shadow-sm hover:shadow-md transition-shadow ${isYou ? 'ring-1 ring-primary/50' : ''}`}>
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
+                {/* Compact header; actions moved below the username for a cleaner layout */}
+                <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isYou ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
                       {user.username[0]?.toUpperCase() || 'U'}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium text-base truncate">{user.username}</p>
+                        <p className="font-medium text-base truncate block">{user.username}</p>
                         {isYou && (
                           <Badge className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.you')}</Badge>
                         )}
-                        {user.isDefault === 1 && (
+                        {isDefault && (
                           <Badge variant="outline" className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.primary')}</Badge>
                         )}
-                        {user.bindingActive === 1 && (
+                        {isBound && (
                           <Badge variant="outline" className="text-xs px-1.5 py-0 shrink-0">{t('pages.users.badges.bound') || 'Привязано'}</Badge>
                         )}
                       </div>
@@ -325,44 +332,45 @@ export default function UsersPage() {
                           </Badge>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex gap-2 flex-wrap">
-                      {user.isDefault !== 1 && (
-                        <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => openEditDialog(user)}>
-                          {t('common.edit')}
-                        </Button>
-                      )}
-                      {user.role !== 'admin' && user.isDefault !== 1 && (
-                        <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => openPermissionsDialog(user)}>
-                          {t('pages.users.buttons.permissions')}
-                        </Button>
-                      )}
-                      {user.isDefault !== 1 && (
-                        <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => openResetPasswordDialog(user)}>
-                          {t('common.reset')}
-                        </Button>
-                      )}
+                      {/* Action buttons under the user name */}
+                      <div className="mt-3">
+                        <div className="flex flex-wrap gap-2">
+                          {!isDefault && (
+                            <Button variant="default" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => openEditDialog(user)}>
+                              {t('common.edit')}
+                            </Button>
+                          )}
+                          {user.role !== 'admin' && !isDefault && (
+                            <Button variant="outline" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => openPermissionsDialog(user)}>
+                              {t('pages.users.buttons.permissions')}
+                            </Button>
+                          )}
+                          {!isDefault && (
+                            <Button variant="outline" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => openResetPasswordDialog(user)}>
+                              {t('common.reset')}
+                            </Button>
+                          )}
 
-                      {/* Binding actions: rotate (generate new key) and revoke */}
-                      {user.isDefault !== 1 && (
-                        <>
-                          <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => handleRotateBinding(user)} disabled={bindingActionLoading}>
-                            <Key className="h-3.5 w-3.5" /> {t('pages.users.buttons.rotateBinding') || 'Rotate'}
-                          </Button>
-                          <Button variant="outline" size="sm" className="h-8 text-sm whitespace-nowrap" onClick={() => handleRevokeBinding(user.id)} disabled={bindingActionLoading}>
-                            <X className="h-3.5 w-3.5" /> {t('pages.users.buttons.revokeBinding') || 'Revoke'}
-                          </Button>
-                        </>
-                      )}
+                          {!isDefault && (
+                            <Button variant="success" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => handleRotateBinding(user)} disabled={bindingActionLoading}>
+                              <Key className="h-3.5 w-3.5 mr-1" /> {t('pages.users.buttons.rotateBinding') || 'Rotate'}
+                            </Button>
+                          )}
+                          {!isDefault && (
+                            <Button variant="destructive" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => handleRevokeBinding(user.id)} disabled={bindingActionLoading}>
+                              <X className="h-3.5 w-3.5 mr-1" /> {t('pages.users.buttons.revokeBinding') || 'Revoke'}
+                            </Button>
+                          )}
 
-                      {user.isDefault !== 1 && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => handleDelete(user.id)} title={t('common.delete')}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                          {!isDefault && (
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(user.id)} title={t('common.delete')}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>
