@@ -16,6 +16,52 @@ import { log } from '../utils/logger.js';
 import { createPendingEnrollment, revokeEnrollment } from '../services/deviceAuth.js';
 import { getAdbAssistBypassMode, patchAdbAssistBypassSmali, type AdbAssistBypassMode } from '../utils/adbBypass.js';
 
+
+async function normalizeManifest(manifestPath: string, jobId?: number): Promise<boolean> {
+  try {
+    if (!fs.existsSync(manifestPath)) return false;
+    const raw = fs.readFileSync(manifestPath, 'utf8');
+
+    // Try robust XML reserialize with fast-xml-parser
+    try {
+      const fxp = await import('fast-xml-parser');
+      const XMLParser = fxp.XMLParser;
+      const XMLBuilder = fxp.XMLBuilder;
+      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '', removeNSPrefix: false, parseAttributeValue: false, parseTagValue: false } as any);
+      const parsed = parser.parse(raw) as any;
+      const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '', format: true, suppressEmptyNode: true } as any);
+      const out = builder.build(parsed);
+      if (out && out.trim().length > 0) {
+        try { fs.copyFileSync(manifestPath, manifestPath + '.bak.normalize'); } catch {}
+        fs.writeFileSync(manifestPath, out, 'utf8');
+        appendJobLog(jobId, 'info', 'Normalized AndroidManifest.xml with fast-xml-parser');
+        return true;
+      }
+    } catch (e) {
+      appendJobLog(jobId, 'stderr', 'fast-xml-parser normalize failed: ' + (e && e.message ? e.message : String(e)));
+    }
+
+    // Fallback: add ="true" to bare android:* attributes in start-tags only
+    try {
+      const before = raw;
+      const fixed = before.replace(/(\s)(android:(?!xmlns)[A-Za-z0-9_.:-]+)(?=(\s|\/|>))/g, function(_m, ws, attr) { return ws + attr + '="true"'; });
+      if (fixed !== before) {
+        try { fs.copyFileSync(manifestPath, manifestPath + '.bak.normalize2'); } catch {}
+        fs.writeFileSync(manifestPath, fixed, 'utf8');
+        appendJobLog(jobId, 'info', 'Normalized AndroidManifest.xml with regex fallback');
+        return true;
+      }
+    } catch (e) {
+      appendJobLog(jobId, 'stderr', 'manifest regex normalize failed: ' + String(e));
+    }
+
+    return false;
+  } catch (err) {
+    appendJobLog(jobId, 'stderr', 'normalizeManifest exception: ' + (err && err.message ? err.message : String(err)));
+    return false;
+  }
+}
+
 const DEFAULT_SERVER_URL = 'http://127.0.0.1:32766';
 const DEFAULT_HOME_URL = 'https://google.com';
 const DEFAULT_PACKAGE_NAME = 'com.liuma.app';
@@ -225,52 +271,6 @@ function cleanupDir(dir: string): void {
   try {
     if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
   } catch { /* ignore */ }
-}
-
-// Normalize AndroidManifest.xml: try a robust XML reserialize first, fallback to a regex that adds ="true" to bare android:* attrs
-async function normalizeManifest(manifestPath: string, jobId?: number): Promise<boolean> {
-  try {
-    if (!fs.existsSync(manifestPath)) return false;
-    const raw = fs.readFileSync(manifestPath, 'utf8');
-
-    // Try robust XML reserialize with fast-xml-parser
-    try {
-      const fxp = await import('fast-xml-parser');
-      const XMLParser = fxp.XMLParser;
-      const XMLBuilder = fxp.XMLBuilder;
-      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '', removeNSPrefix: false, parseAttributeValue: false, parseTagValue: false } as any);
-      const parsed = parser.parse(raw) as any;
-      const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '', format: true, suppressEmptyNode: true } as any);
-      const out = builder.build(parsed);
-      if (out && out.trim().length > 0) {
-        try { fs.copyFileSync(manifestPath, manifestPath + '.bak.normalize'); } catch {}
-        fs.writeFileSync(manifestPath, out, 'utf8');
-        appendJobLog(jobId, 'info', 'Normalized AndroidManifest.xml with fast-xml-parser');
-        return true;
-      }
-    } catch (e) {
-      appendJobLog(jobId, 'stderr', `fast-xml-parser normalize failed: ${e?.message || String(e)}`);
-    }
-
-    // Fallback: add ="true" to bare android:* attributes in start-tags only
-    try {
-      const before = raw;
-      const fixed = before.replace(/(\s)(android:(?!xmlns)[A-Za-z0-9_.:-]+)(?=(\s|\/|>))/g, (_m, ws, attr) => `${ws}${attr}="true"`);
-      if (fixed !== before) {
-        try { fs.copyFileSync(manifestPath, manifestPath + '.bak.normalize2'); } catch {}
-        fs.writeFileSync(manifestPath, fixed, 'utf8');
-        appendJobLog(jobId, 'info', 'Normalized AndroidManifest.xml with regex fallback');
-        return true;
-      }
-    } catch (e) {
-      appendJobLog(jobId, 'stderr', `manifest regex normalize failed: ${String(e)}`);
-    }
-
-    return false;
-  } catch (err: any) {
-    appendJobLog(jobId, 'stderr', `normalizeManifest exception: ${err?.message || String(err)}`);
-    return false;
-  }
 }
 
 function killAllProcesses(): void {
@@ -635,20 +635,18 @@ async function buildApkAsync(serverUrl: string, homePageUrl: string, bootstrapTo
     if (checkCancelled()) return;
 
     setProgress('building', 'Rebuilding APK with apktool...', false, null, appName, jobId);
-    try {
-      await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
-    } catch (err: any) {
-      const msg = String(err.message || err || '');
-      if (/not well-formed|invalid token|must be followed by the\s*' = '/i.test(msg)) {
-        appendJobLog(jobId, 'info', 'apktool build failed due to malformed manifest — attempting normalization and retry');
-        // try to normalize manifest and retry once
-        try { await normalizeManifest(path.join(decompilePath, 'AndroidManifest.xml'), jobId); } catch (e) { appendJobLog(jobId, 'stderr', `normalizeManifest failed: ${String(e)}`); }
-        // retry once
-        await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
-      } else {
-        throw err;
-      }
+    await try {
+    runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile)
+  } catch (err) {
+    const msg = String((err && err.message) ? err.message : err || '');
+    if (/not well-formed|invalid token|must be followed by the\s*' = '/i.test(msg)) {
+      appendJobLog(jobId, 'info', 'apktool build failed due to malformed manifest — attempting normalization and retry');
+      try { await normalizeManifest(decompilePath + '/AndroidManifest.xml', jobId); } catch (e) { appendJobLog(jobId, 'stderr', 'normalizeManifest failed: ' + String(e)); }
+      runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile)
+    } else {
+      throw err;
     }
+  }
 
     if (checkCancelled()) return;
 
