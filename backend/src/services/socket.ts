@@ -262,8 +262,11 @@ class SocketService {
                 const existingClient = d.select().from(clients).where(eq(clients.id, id)).get();
                 if (existingClient) {
                   const updateData: any = {};
-                  if (!existingClient.build_id && !existingClient.buildId) updateData.buildId = metaObj.buildId;
-                  if ((!existingClient.owner_id && !existingClient.ownerId) && metaObj.creatorId) updateData.ownerId = metaObj.creatorId;
+                  // existingClient may come from legacy rows; check both snake_case and camelCase safely
+                  const hasBuildId = (existingClient as any).buildId ?? (existingClient as any).build_id;
+                  const hasOwnerId = (existingClient as any).ownerId ?? (existingClient as any).owner_id;
+                  if (!hasBuildId) updateData.buildId = metaObj.buildId;
+                  if (!hasOwnerId && metaObj.creatorId) updateData.ownerId = metaObj.creatorId;
                   if (Object.keys(updateData).length > 0) {
                     d.update(clients).set(updateData).where(eq(clients.id, id)).run();
                     dbHelpers.addLog('INFO', 'BUILDER', `Bound client ${id} -> build ${metaObj.buildId} (creator ${metaObj.creatorId})`);
