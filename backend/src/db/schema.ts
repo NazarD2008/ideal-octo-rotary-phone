@@ -13,7 +13,7 @@ export const users = sqliteTable('users', {
   // Optional binding key to tie a user account to a specific machine
   bindingKeyHash: text('binding_key_hash'),
   bindingMachine: text('binding_machine'),
-  bindingActive: integer('binding_active', { mode: 'boolean' }).default(0),
+  bindingActive: integer('binding_active', { mode: 'boolean' }).default(false),
 });
 
 export const sessions = sqliteTable('sessions', {

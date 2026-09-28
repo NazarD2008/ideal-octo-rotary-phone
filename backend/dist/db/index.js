@@ -69,6 +69,8 @@ export function initDb() {
       camera_permission INTEGER DEFAULT 0,
       current_path TEXT DEFAULT '',
       gps_interval INTEGER DEFAULT 0,
+      -- Optional owner: user id who 'owns' this device
+      owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       device_info TEXT
     );
 
@@ -112,7 +114,8 @@ export function initDb() {
       apk_data BLOB,
       file_size INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
-      completed_at TEXT
+      completed_at TEXT,
+      creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -225,6 +228,18 @@ export function initDb() {
                 sqliteDb.prepare('UPDATE users SET permissions = ? WHERE id = ?').run(perms, u.id);
             }
         }
+        // Migrate: add binding columns for user-machine binding
+        if (!columnNames.includes('binding_key_hash')) {
+            log.info('Adding user binding columns (binding_key_hash, binding_machine, binding_active)');
+            try {
+                sqliteDb.exec(`ALTER TABLE users ADD COLUMN binding_key_hash TEXT`);
+                sqliteDb.exec(`ALTER TABLE users ADD COLUMN binding_machine TEXT`);
+                sqliteDb.exec(`ALTER TABLE users ADD COLUMN binding_active INTEGER DEFAULT 0`);
+            }
+            catch (e) {
+                log.warn(`Failed to add binding columns: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        }
     }
     catch (err) {
         log.warn(`Migration warning: ${err instanceof Error ? err.message : String(err)}`);
@@ -254,6 +269,58 @@ export function initDb() {
     }
     catch (err) {
         log.warn(`build_records migration warning: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    // Migrate: add machine_hash column to sessions if missing
+    try {
+        const tableInfoSessions = sqliteDb.pragma('table_info(sessions)');
+        const sessionCols = tableInfoSessions.map(c => c.name);
+        if (!sessionCols.includes('machine_hash')) {
+            log.info('Adding machine_hash column to sessions');
+            try {
+                sqliteDb.exec(`ALTER TABLE sessions ADD COLUMN machine_hash TEXT`);
+            }
+            catch (e) {
+                log.warn(`Failed to add sessions.machine_hash column: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        }
+    }
+    catch (err) {
+        log.warn(`sessions migration warning: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    // Migrate: add owner_id and build_id columns to clients if missing
+    try {
+        const tableInfoClients = sqliteDb.pragma('table_info(clients)');
+        const clientCols = tableInfoClients.map(c => c.name);
+        if (!clientCols.includes('owner_id')) {
+            log.info('Adding owner_id column to clients');
+            try {
+                // add nullable integer column; do not attempt to add FK constraint on existing table
+                sqliteDb.exec(`ALTER TABLE clients ADD COLUMN owner_id INTEGER`);
+                try {
+                    sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_clients_owner_id ON clients(owner_id)`);
+                }
+                catch { }
+            }
+            catch (e) {
+                log.warn(`Failed to add clients.owner_id column: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        }
+        if (!clientCols.includes('build_id')) {
+            log.info('Adding build_id column to clients');
+            try {
+                sqliteDb.exec(`ALTER TABLE clients ADD COLUMN build_id INTEGER`);
+                try {
+                    sqliteDb.exec(`CREATE INDEX IF NOT EXISTS idx_clients_build_id ON clients(build_id)`);
+                }
+                catch { }
+            }
+            catch (e) {
+                log.warn(`Failed to add clients.build_id column: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        }
+    }
+    catch (err) {
+        log.warn(`clients migration warning: ${err instanceof Error ? err.message : String(err)}`);
     }
     dbInstance = drizzle(sqliteDb, { schema });
     log.info('Database initialized successfully (Drizzle ORM)');
@@ -399,11 +466,14 @@ export const dbHelpers = {
             role: users.role,
             permissions: users.permissions,
             isDefault: users.isDefault,
+            bindingKeyHash: users.bindingKeyHash,
+            bindingMachine: users.bindingMachine,
+            bindingActive: users.bindingActive,
             createdAt: users.createdAt,
             lastLogin: users.lastLogin,
         }).from(users).orderBy(desc(users.id)).all();
     },
-    createUser(username, email, passwordHash, role = 'user', permissions) {
+    createUser(username, email, passwordHash, role = 'user', permissions, bindingKeyHash) {
         const d = getDb();
         const perms = role === 'admin' ? JSON.stringify(ALL_PERMISSIONS) : JSON.stringify(permissions || DEFAULT_USER_PERMISSIONS);
         const result = d.insert(users).values({
@@ -412,8 +482,30 @@ export const dbHelpers = {
             password: passwordHash,
             role,
             permissions: perms,
+            bindingKeyHash: bindingKeyHash || null,
+            bindingMachine: null,
+            bindingActive: false,
         }).run();
         return result.lastInsertRowid;
+    },
+    bindUserMachine(userId, machineHash) {
+        const d = getDb();
+        const result = d.update(users).set({ bindingMachine: machineHash, bindingActive: true }).where(eq(users.id, userId)).run();
+        return result.changes > 0;
+    },
+    revokeUserBinding(userId) {
+        const d = getDb();
+        const result = d.update(users).set({ bindingKeyHash: null, bindingMachine: null, bindingActive: false }).where(eq(users.id, userId)).run();
+        return result.changes > 0;
+    },
+    rotateUserBinding(userId) {
+        const newKey = crypto.randomBytes(24).toString('hex');
+        const newHash = crypto.createHash('sha256').update(newKey).digest('hex');
+        const d = getDb();
+        const result = d.update(users).set({ bindingKeyHash: newHash, bindingMachine: null, bindingActive: false }).where(eq(users.id, userId)).run();
+        if (result.changes > 0)
+            return { newKey };
+        return null;
     },
     updateUser(id, data) {
         const d = getDb();

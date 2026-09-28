@@ -28,7 +28,12 @@ export declare const dbHelpers: {
     getUserByUsernameOrEmail(identifier: string): typeof schema.users.$inferSelect | undefined;
     getUserById(id: number): typeof schema.users.$inferSelect | undefined;
     getAllUsers(): Array<Omit<typeof schema.users.$inferSelect, "password">>;
-    createUser(username: string, email: string, passwordHash: string, role?: "admin" | "user", permissions?: Permission[]): number;
+    createUser(username: string, email: string, passwordHash: string, role?: "admin" | "user", permissions?: Permission[], bindingKeyHash?: string | null): number;
+    bindUserMachine(userId: number, machineHash: string): boolean;
+    revokeUserBinding(userId: number): boolean;
+    rotateUserBinding(userId: number): {
+        newKey: string;
+    } | null;
     updateUser(id: number, data: {
         username?: string;
         email?: string;

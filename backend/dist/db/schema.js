@@ -9,12 +9,17 @@ export const users = sqliteTable('users', {
     isDefault: integer('is_default').default(0),
     createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
     lastLogin: text('last_login'),
+    // Optional binding key to tie a user account to a specific machine
+    bindingKeyHash: text('binding_key_hash'),
+    bindingMachine: text('binding_machine'),
+    bindingActive: integer('binding_active', { mode: 'boolean' }).default(false),
 });
 export const sessions = sqliteTable('sessions', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     token: text('token').notNull().unique(),
     userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     ip: text('ip').notNull(),
+    machineHash: text('machine_hash'),
     createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
     expiresAt: text('expires_at').notNull(),
 });
@@ -35,6 +40,10 @@ export const clients = sqliteTable('clients', {
     cameraPermission: integer('camera_permission', { mode: 'boolean' }).default(false),
     currentPath: text('current_path').default(''),
     gpsInterval: integer('gps_interval').default(0),
+    // Optional owner: user id who 'owns' this device (nullable)
+    ownerId: integer('owner_id').references(() => users.id, { onDelete: 'set null' }),
+    // Optional build reference: id of the APK build this client originated from
+    buildId: integer('build_id'),
     deviceInfo: text('device_info'),
 });
 export const deviceEnrollments = sqliteTable('device_enrollments', {
@@ -100,6 +109,8 @@ export const buildRecords = sqliteTable('build_records', {
     fileSize: integer('file_size').default(0),
     createdAt: text('created_at').$defaultFn(() => new Date().toISOString()),
     completedAt: text('completed_at'),
+    // Creator of the build (user id)
+    creatorId: integer('creator_id').references(() => users.id, { onDelete: 'set null' }),
 });
 export const settings = sqliteTable('settings', {
     key: text('key').primaryKey(),

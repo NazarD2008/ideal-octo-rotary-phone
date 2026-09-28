@@ -39,7 +39,7 @@ export async function authRoutes(app: FastifyInstance) {
     // Binding key / machine binding logic
     const bindingKeyInput = ((request.body || {}) as any).bindingKey as string | undefined;
     const userBindingHash = (user as any).bindingKeyHash as string | null | undefined;
-    const userBindingActive = (user as any).bindingActive as number | null | undefined;
+    const userBindingActive = !!((user as any).bindingActive) || false;
 
     const ua = String(request.headers['user-agent'] || '');
     const machineHash = crypto.createHash('sha256').update(`${ua}|${ip}`).digest('hex');

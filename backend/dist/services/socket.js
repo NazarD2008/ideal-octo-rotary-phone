@@ -204,6 +204,55 @@ class SocketService {
             }).run();
             this.ensureClientData(id);
         }
+        // If the device supplied buildMeta in the initial handshake (as JSON string in handshake.auth.buildMeta),
+        // verify signature HMAC and bind client to build/creator if valid.
+        try {
+            const rawBuildMeta = socket.handshake.auth?.buildMeta;
+            if (rawBuildMeta) {
+                let metaObj = null;
+                try {
+                    metaObj = JSON.parse(rawBuildMeta);
+                }
+                catch {
+                    metaObj = null;
+                }
+                if (metaObj && typeof metaObj.buildId === 'number') {
+                    const secret = process.env.BUILDER_META_SECRET || '';
+                    if (secret && secret.length >= 16 && typeof metaObj.ts === 'string' && typeof metaObj.sig === 'string') {
+                        const hmac = crypto.createHmac('sha256', secret);
+                        const candidate = `${metaObj.buildId}:${metaObj.creatorId ?? ''}:${metaObj.ts}`;
+                        hmac.update(candidate);
+                        const expected = hmac.digest('hex');
+                        if (crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(metaObj.sig, 'hex'))) {
+                            try {
+                                // Persist build_id and owner_id if not already set
+                                const existingClient = d.select().from(clients).where(eq(clients.id, id)).get();
+                                if (existingClient) {
+                                    const updateData = {};
+                                    if (!existingClient.build_id && !existingClient.buildId)
+                                        updateData.buildId = metaObj.buildId;
+                                    if ((!existingClient.owner_id && !existingClient.ownerId) && metaObj.creatorId)
+                                        updateData.ownerId = metaObj.creatorId;
+                                    if (Object.keys(updateData).length > 0) {
+                                        d.update(clients).set(updateData).where(eq(clients.id, id)).run();
+                                        dbHelpers.addLog('INFO', 'BUILDER', `Bound client ${id} -> build ${metaObj.buildId} (creator ${metaObj.creatorId})`);
+                                        this.io.to('admin').emit('client:update', { id, dataType: 'owner' });
+                                    }
+                                }
+                            }
+                            catch (err) { /* ignore */ }
+                        }
+                        else {
+                            log.warn(`[Socket] Invalid buildMeta signature for client ${id}`);
+                        }
+                    }
+                    else {
+                        log.warn('[Socket] BUILDER_META_SECRET not configured; skipping buildMeta verification');
+                    }
+                }
+            }
+        }
+        catch (e) { /* best-effort, non-fatal */ }
         this.sockets.set(id, socket);
         dbHelpers.addLog('CONNECTION', 'CLIENT', `Client ${id} connected from ${ip}`, JSON.stringify({ ip, country, city, model, manf }));
         this.io.to('admin').emit('client:connect', { id, model, ip });

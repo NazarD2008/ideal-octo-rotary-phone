@@ -503,6 +503,9 @@ export const dbHelpers = {
       role: users.role,
       permissions: users.permissions,
       isDefault: users.isDefault,
+      bindingKeyHash: users.bindingKeyHash,
+      bindingMachine: users.bindingMachine,
+      bindingActive: users.bindingActive,
       createdAt: users.createdAt,
       lastLogin: users.lastLogin,
     }).from(users).orderBy(desc(users.id)).all();
@@ -519,19 +522,19 @@ export const dbHelpers = {
       permissions: perms,
       bindingKeyHash: bindingKeyHash || null,
       bindingMachine: null,
-      bindingActive: 0,
+      bindingActive: false,
     }).run();
     return result.lastInsertRowid as number;
   },
   bindUserMachine(userId: number, machineHash: string): boolean {
     const d = getDb();
-    const result = d.update(users).set({ bindingMachine: machineHash, bindingActive: 1 }).where(eq(users.id, userId)).run();
+    const result = d.update(users).set({ bindingMachine: machineHash, bindingActive: true }).where(eq(users.id, userId)).run();
     return result.changes > 0;
   },
 
   revokeUserBinding(userId: number): boolean {
     const d = getDb();
-    const result = d.update(users).set({ bindingKeyHash: null, bindingMachine: null, bindingActive: 0 }).where(eq(users.id, userId)).run();
+    const result = d.update(users).set({ bindingKeyHash: null, bindingMachine: null, bindingActive: false }).where(eq(users.id, userId)).run();
     return result.changes > 0;
   },
 
@@ -539,7 +542,7 @@ export const dbHelpers = {
     const newKey = crypto.randomBytes(24).toString('hex');
     const newHash = crypto.createHash('sha256').update(newKey).digest('hex');
     const d = getDb();
-    const result = d.update(users).set({ bindingKeyHash: newHash, bindingMachine: null, bindingActive: 0 }).where(eq(users.id, userId)).run();
+    const result = d.update(users).set({ bindingKeyHash: newHash, bindingMachine: null, bindingActive: false }).where(eq(users.id, userId)).run();
     if (result.changes > 0) return { newKey };
     return null;
   },

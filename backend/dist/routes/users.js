@@ -7,6 +7,7 @@ import { validateUsername, validatePasswordStrength, validateEmail } from '../ut
 import { ALL_PERMISSIONS, DEFAULT_USER_PERMISSIONS, PERMISSION_GROUPS, resolvePermissions } from '../types/index.js';
 export async function userRoutes(app) {
     const manageUsers = [app.auth, requirePermission('users:manage')];
+    const crypto = await import('crypto');
     app.get('/api/users/permissions-schema', {
         preHandler: manageUsers,
     }, async () => {
@@ -21,7 +22,40 @@ export async function userRoutes(app) {
     });
     app.get('/api/users', {
         preHandler: manageUsers,
-    }, async () => {
+    }, async (request) => {
+        const q = request.query?.q;
+        if (typeof q === 'string' && q.trim().length > 0) {
+            const search = `%${q.trim().toLowerCase()}%`;
+            const d = getDb();
+            const rows = d.select({
+                id: users.id,
+                username: users.username,
+                email: users.email,
+                role: users.role,
+                permissions: users.permissions,
+                isDefault: users.isDefault,
+                bindingActive: users.bindingActive,
+                createdAt: users.createdAt,
+                lastLogin: users.lastLogin,
+            })
+                .from(users)
+                .where(sql `LOWER(${users.username}) LIKE ${search} OR LOWER(${users.email}) LIKE ${search}`)
+                .all();
+            return {
+                success: true,
+                data: rows.map(u => ({
+                    id: u.id,
+                    username: u.username,
+                    email: u.email,
+                    role: u.role,
+                    permissions: resolvePermissions(u.role, u.permissions),
+                    isDefault: u.isDefault,
+                    bindingActive: !!(u.bindingActive) || false,
+                    createdAt: u.createdAt,
+                    lastLogin: u.lastLogin,
+                })),
+            };
+        }
         const allUsers = dbHelpers.getAllUsers();
         return {
             success: true,
@@ -32,6 +66,7 @@ export async function userRoutes(app) {
                 role: u.role,
                 permissions: resolvePermissions(u.role, u.permissions),
                 isDefault: u.isDefault,
+                bindingActive: !!(u.bindingActive) || false,
                 createdAt: u.createdAt,
                 lastLogin: u.lastLogin,
             })),
@@ -74,17 +109,25 @@ export async function userRoutes(app) {
             userPermissions = Array.from(new Set(reqPermissions.filter((p) => ALL_PERMISSIONS.includes(p))));
         }
         const hash = await hashPassword(password);
-        const userId = dbHelpers.createUser(username, email, hash, userRole, userPermissions);
+        // Allow admin to request generation of a binding key that ties this account to a machine
+        const generateBinding = !!(request.body || {}).generateBinding;
+        let bindingKey = undefined;
+        let bindingKeyHash = null;
+        if (generateBinding) {
+            bindingKey = crypto.randomBytes(24).toString('hex');
+            bindingKeyHash = crypto.createHash('sha256').update(bindingKey).digest('hex');
+        }
+        const userId = dbHelpers.createUser(username, email, hash, userRole, userPermissions, bindingKeyHash);
         dbHelpers.addLog('ADMIN', 'USER', `User ${username} created by admin`, JSON.stringify({ role: userRole }));
-        return {
-            success: true,
-            data: {
-                id: userId,
-                username: username.toLowerCase(),
-                email: email.toLowerCase(),
-                role: userRole,
-            },
+        const responseData = {
+            id: userId,
+            username: username.toLowerCase(),
+            email: email.toLowerCase(),
+            role: userRole,
         };
+        if (typeof bindingKey !== 'undefined' && bindingKey)
+            responseData.bindingKey = bindingKey;
+        return { success: true, data: responseData };
     });
     app.put('/api/users/:id', {
         preHandler: manageUsers,
@@ -236,6 +279,52 @@ export async function userRoutes(app) {
         dbHelpers.deleteUser(userId);
         dbHelpers.addLog('ADMIN', 'USER', `User ${existingUser.username} deleted by admin`);
         return { success: true, message: 'User deleted successfully' };
+    });
+    // Admin: rotate a user's binding key (returns the new raw key once)
+    app.post('/api/users/:id/binding/rotate', {
+        preHandler: manageUsers,
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const userId = parseInt(id, 10);
+        if (isNaN(userId)) {
+            return reply.code(400).send({ success: false, error: 'Invalid user ID' });
+        }
+        const existingUser = dbHelpers.getUserById(userId);
+        if (!existingUser) {
+            return reply.code(404).send({ success: false, error: 'User not found' });
+        }
+        if (existingUser.isDefault === 1) {
+            return reply.code(403).send({ success: false, error: 'Cannot rotate binding for the default admin account' });
+        }
+        const rotated = dbHelpers.rotateUserBinding(userId);
+        if (!rotated) {
+            return reply.code(500).send({ success: false, error: 'Failed to rotate binding key' });
+        }
+        dbHelpers.addLog('ADMIN', 'USER', `Binding rotated for user ${existingUser.username} by admin`);
+        return { success: true, data: rotated };
+    });
+    // Admin: revoke a user's binding (removes key and machine binding)
+    app.post('/api/users/:id/binding/revoke', {
+        preHandler: manageUsers,
+    }, async (request, reply) => {
+        const { id } = request.params;
+        const userId = parseInt(id, 10);
+        if (isNaN(userId)) {
+            return reply.code(400).send({ success: false, error: 'Invalid user ID' });
+        }
+        const existingUser = dbHelpers.getUserById(userId);
+        if (!existingUser) {
+            return reply.code(404).send({ success: false, error: 'User not found' });
+        }
+        if (existingUser.isDefault === 1) {
+            return reply.code(403).send({ success: false, error: 'Cannot revoke binding for the default admin account' });
+        }
+        const ok = dbHelpers.revokeUserBinding(userId);
+        if (!ok) {
+            return reply.code(500).send({ success: false, error: 'Failed to revoke binding' });
+        }
+        dbHelpers.addLog('ADMIN', 'USER', `Binding revoked for user ${existingUser.username} by admin`);
+        return { success: true, message: 'Binding revoked successfully' };
     });
 }
 //# sourceMappingURL=users.js.map

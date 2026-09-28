@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { getDb, dbHelpers } from '../db/index.js';
-import { clients } from '../db/schema.js';
+import { clients, users, buildRecords } from '../db/schema.js';
 import type { clients as ClientsTable } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { socketService } from '../services/socket.js';
@@ -216,8 +216,9 @@ export async function deviceRoutes(app: FastifyInstance) {
     }
 
     if (user?.role !== 'admin') {
-      // Non-admins can only access their own devices
-      if (!client.owner_id || client.owner_id !== user.userId) {
+      // Non-admins can only access their own devices; support legacy snake_case rows too
+      const rowOwnerId = (client as any).ownerId ?? (client as any).owner_id;
+      if (!rowOwnerId || rowOwnerId !== user.userId) {
         return reply.code(403).send({ success: false, error: 'Not allowed' });
       }
     }
@@ -353,7 +354,8 @@ export async function deviceRoutes(app: FastifyInstance) {
       if (!user) return reply.code(404).send({ success: false, error: 'User not found' });
     }
 
-    d.update(clients).set({ owner_id: ownerId }).where(eq(clients.id, id)).run();
+    // Use Drizzle camelCase property names (ownerId). Keep null allowed to clear owner.
+    d.update(clients).set({ ownerId }).where(eq(clients.id, id)).run();
     dbHelpers.addLog('ADMIN', 'CLIENT', `Owner for client ${id} set to ${ownerId}`);
 
     return { success: true };
@@ -633,8 +635,8 @@ export function formatClientWithOwner(client: ClientRow) {
       const buildId = (client as any).buildId ?? (client as any).build_id;
       if (buildId) {
         const build = d.select().from(buildRecords).where(eq(buildRecords.id, buildId)).get();
-        if (build?.creatorId || build?.creator_id) {
-          const bOwnerId = build.creatorId ?? build.creator_id;
+        const bOwnerId = build ? (build.creatorId ?? (build as any).creator_id) : null;
+        if (bOwnerId) {
           const owner = d.select().from(users).where(eq(users.id, bOwnerId)).get();
           if (owner) return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
         }
