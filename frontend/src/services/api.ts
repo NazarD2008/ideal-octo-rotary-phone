@@ -91,7 +91,7 @@ export const clientsApi = {
 };
 
 export const logsApi = {
-  getLogs: (params?: { type?: string; category?: string; search?: string; limit?: number }) => api.get('/logs', { params }),
+  getLogs: (params?: { type?: string; category?: string; search?: string; limit?: number; offset?: number; dateFrom?: string; dateTo?: string }) => api.get('/logs', { params }),
   getStats: () => api.get('/logs/stats'),
   clear: () => api.post('/logs/clear'),
 };
@@ -105,12 +105,18 @@ export const builderApi = {
   retryJob: (id: number) => api.post(`/builder/job/${id}/retry`),
   downloadApk: (onProgress?: (progressEvent: { loaded: number; total?: number }) => void) => api.get('/builder/download', { responseType: 'blob', timeout: 300000, onDownloadProgress: onProgress }),
   // New: list jobs and download by job id
-  getJobs: () => api.get('/builder/jobs'),
+  getJobs: (params?: { q?: string; status?: string; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number }) => api.get('/builder/jobs', { params }),
   getJob: (id: number) => api.get(`/builder/job/${id}`),
   downloadApkById: (id: number, onProgress?: (progressEvent: { loaded: number; total?: number }) => void) => api.get(`/builder/download/${id}`, { responseType: 'blob', timeout: 300000, onDownloadProgress: onProgress }),
   // Logs
   getJobLog: (id: number, params?: { lines?: number; format?: 'text' | 'json' }) => api.get(`/builder/job/${id}/log`, { params }),
   downloadJobLog: (id: number, onProgress?: (progressEvent: { loaded: number; total?: number }) => void) => api.get(`/builder/job/${id}/log`, { params: { download: 1 }, responseType: 'blob', timeout: 300000, onDownloadProgress: onProgress }),
+};
+
+export const deviceActivationApi = {
+  list: () => api.get('/device/enrollment-requests'),
+  approve: (id: string) => api.post(`/device/enrollment-requests/${id}/approve`),
+  reject: (id: string) => api.post(`/device/enrollment-requests/${id}/reject`),
 };
 
 export const usersApi = {

