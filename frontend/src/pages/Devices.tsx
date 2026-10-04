@@ -196,6 +196,7 @@ export default function DevicesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('devices.table.device')}</TableHead>
+                      <TableHead>Пользователь</TableHead>
                       <TableHead>{t('devices.table.location')}</TableHead>
                       <TableHead>{t('devices.table.ipAddress')}</TableHead>
                       <TableHead>{t('devices.table.lastSeen')}</TableHead>
@@ -218,11 +219,29 @@ export default function DevicesPage() {
                             <div>
                               <p className="font-medium">{client.deviceModel || t('common.unknown')}</p>
                               <p className="text-xs text-muted-foreground">{client.deviceBrand || ''} {client.deviceVersion || ''}</p>
+                              {client.apkCreator && (
+                                <p className="text-xs text-muted-foreground mt-1">Создатель APK: {client.apkCreator.username}{client.apkName ? ` · ${client.apkName}` : ''}</p>
+                              )}
                               {client.owner && (
                                 <p className="text-xs text-muted-foreground mt-1">{t('pages.devices.ownerLabel')}: {client.owner.username}</p>
                               )}
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {client.apkCreator ? (
+                            <div>
+                              <p className="font-medium text-sm">{client.apkCreator.username}</p>
+                              <p className="text-xs text-muted-foreground">Создатель APK{client.apkName ? ` · ${client.apkName}` : ''}</p>
+                            </div>
+                          ) : client.owner ? (
+                            <div>
+                              <p className="font-medium text-sm">{client.owner.username}</p>
+                              <p className="text-xs text-muted-foreground">Владелец устройства</p>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Не указан</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">

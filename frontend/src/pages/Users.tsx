@@ -88,7 +88,11 @@ export default function UsersPage() {
       } catch {}
 
       const clients = Array.isArray(clientsRes.data?.clients)
-        ? clientsRes.data.clients.filter((c: any) => c.owner?.id === targetUser.id || c.ownerId === targetUser.id)
+        ? clientsRes.data.clients.filter((c: any) =>
+            c.owner?.id === targetUser.id ||
+            c.ownerId === targetUser.id ||
+            c.apkCreator?.id === targetUser.id
+          )
         : [];
 
       const logItems = Array.isArray(logsRes.data?.data) ? logsRes.data.data : [];
