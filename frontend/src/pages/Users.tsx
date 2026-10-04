@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { usersApi } from '@/services/api';
+import { usersApi, clientsApi, logsApi, builderApi } from '@/services/api';
 import { useAuthStore } from '@/store/auth';
 import type { UserItem, UserRole, Permission } from '@/types';
 import { PERMISSION_GROUPS, ALL_PERMISSIONS, DEFAULT_USER_PERMISSIONS } from '@/types';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
-  Users as UsersIcon, Plus, Trash2, X, Check, AlertCircle, ShieldCheck, Shield, RefreshCw, Lock, Search, Mail, Clock, Key
+  Users as UsersIcon, Plus, Trash2, X, Check, AlertCircle, ShieldCheck, Shield, RefreshCw, Lock, Search, Mail, Clock, Key, Package, Smartphone, ListChecks
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { t } from '@/locales/i18n';
@@ -30,6 +30,9 @@ export default function UsersPage() {
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [dialogLoading, setDialogLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedProfileUser, setSelectedProfileUser] = useState<UserItem | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileData, setProfileData] = useState<any | null>(null);
 
   const [formUsername, setFormUsername] = useState('');
   const [formEmail, setFormEmail] = useState('');
@@ -38,6 +41,18 @@ export default function UsersPage() {
   const [formPermissions, setFormPermissions] = useState<Permission[]>([]);
 
   useEffect(() => { fetchUsers(); }, []);
+
+  useEffect(() => {
+    if (!selectedProfileUser) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedProfileUser(null);
+        setProfileData(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedProfileUser]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -55,6 +70,40 @@ export default function UsersPage() {
 
   const [generateBindingKey, setGenerateBindingKey] = useState(false);
   const [bindingActionLoading, setBindingActionLoading] = useState(false);
+
+  const openUserProfile = async (targetUser: UserItem) => {
+    setSelectedProfileUser(targetUser);
+    setProfileData(null);
+    setProfileLoading(true);
+    try {
+      const [clientsRes, logsRes] = await Promise.all([
+        clientsApi.getAll(),
+        logsApi.getLogs({ search: targetUser.username, limit: 8, offset: 0 }),
+      ]);
+
+      let builds: any[] = [];
+      try {
+        const b = await builderApi.getJobs({ q: targetUser.username, page: 1, pageSize: 20 });
+        builds = Array.isArray(b.data?.data) ? b.data.data : [];
+      } catch {}
+
+      const clients = Array.isArray(clientsRes.data?.clients)
+        ? clientsRes.data.clients.filter((c: any) => c.owner?.id === targetUser.id || c.ownerId === targetUser.id)
+        : [];
+
+      const logItems = Array.isArray(logsRes.data?.data) ? logsRes.data.data : [];
+
+      setProfileData({
+        builds,
+        clients,
+        logs: logItems,
+      });
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Не удалось загрузить профиль пользователя');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const openCreateDialog = () => {
     setFormUsername('');
@@ -336,6 +385,9 @@ export default function UsersPage() {
                       {/* Action buttons under the user name */}
                       <div className="mt-3">
                         <div className="flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => openUserProfile(user)}>
+                            <ListChecks className="h-3.5 w-3.5 mr-1" /> Подробнее
+                          </Button>
                           {!isDefault && (
                             <Button variant="default" size="sm" className="px-3 py-1.5 rounded-md shadow-sm" onClick={() => openEditDialog(user)}>
                               {t('common.edit')}
@@ -386,7 +438,7 @@ export default function UsersPage() {
 
                 <div className="mt-3">
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>Permissions</span>
+                    <span>Права</span>
                     <span>
                       {user.role === 'admin'
                         ? `All (${ALL_PERMISSIONS.length})`
@@ -406,6 +458,99 @@ export default function UsersPage() {
           })
         )}
       </div>
+
+      <Dialog open={selectedProfileUser !== null} onOpenChange={(open) => { if (!open) { setSelectedProfileUser(null); setProfileData(null); } }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <button
+            type="button"
+            aria-label="Закрыть профиль"
+            onClick={() => { setSelectedProfileUser(null); setProfileData(null); }}
+            className="absolute right-4 top-4 z-10 rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UsersIcon className="h-5 w-5 text-primary" />
+              Профиль: {selectedProfileUser?.username}
+            </DialogTitle>
+            <DialogDescription>
+              Сводка по пользователю, его сборкам, устройствам и последним событиям.
+            </DialogDescription>
+          </DialogHeader>
+
+          {profileLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : profileData ? (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><Package className="h-4 w-4" /> Билды</div><div className="text-2xl font-bold mt-1">{profileData.builds.length}</div></CardContent></Card>
+                <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><Smartphone className="h-4 w-4" /> Устройства</div><div className="text-2xl font-bold mt-1">{profileData.clients.length}</div></CardContent></Card>
+                <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-muted-foreground text-xs"><ListChecks className="h-4 w-4" /> События</div><div className="text-2xl font-bold mt-1">{profileData.logs.length}</div></CardContent></Card>
+                <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Последний вход</div><div className="text-sm font-semibold mt-2">{selectedProfileUser?.lastLogin ? formatDate(selectedProfileUser.lastLogin) : 'Никогда'}</div></CardContent></Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Последние сборки</h3>
+                    {profileData.builds.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Сборок нет</p>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-auto">
+                        {profileData.builds.slice(0, 10).map((build: any) => (
+                          <div key={build.id} className="flex items-center justify-between gap-3 border rounded-md p-2 text-sm">
+                            <div><span className="font-mono">#{build.id}</span> · {build.appName || 'APK'}</div>
+                            <Badge variant="secondary">{build.status}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Устройства</h3>
+                    {profileData.clients.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Устройств нет</p>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-auto">
+                        {profileData.clients.slice(0, 10).map((client: any) => (
+                          <div key={client.id} className="border rounded-md p-2 text-sm">
+                            <div className="font-medium">{client.deviceBrand || ''} {client.deviceModel || 'Устройство'}</div>
+                            <div className="font-mono text-xs text-muted-foreground">{client.id} · {client.online ? 'online' : 'offline'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-3">Последние события</h3>
+                  {profileData.logs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Событий нет</p>
+                  ) : (
+                    <div className="space-y-2 max-h-56 overflow-auto">
+                      {profileData.logs.slice(0, 8).map((entry: any, index: number) => (
+                        <div key={entry.id || index} className="border-b last:border-b-0 pb-2 text-sm">
+                          <div className="text-xs text-muted-foreground">{entry.time ? formatDate(entry.time) : '—'} · {entry.type || 'INFO'} · {entry.ip || '—'}</div>
+                          <div className="mt-1">{entry.message}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialog !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>
         <DialogContent className={dialog?.mode === 'permissions' ? 'max-w-lg' : dialog?.mode === 'showBindingKey' ? 'max-w-sm' : 'max-w-md'}>
